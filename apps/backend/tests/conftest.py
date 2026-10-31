@@ -8,6 +8,12 @@ TEST_DB_URL = os.environ.get(
 )
 os.environ["DATABASE_URL"] = TEST_DB_URL
 os.environ.setdefault("APP_ENV", "test")
+# Isolated private storage for uploaded files during tests
+import tempfile  # noqa: E402
+
+TEST_STORAGE = tempfile.mkdtemp(prefix="basharnia-test-storage-")
+os.environ["STORAGE_ROOT"] = TEST_STORAGE
+os.environ["MAX_UPLOAD_MB"] = "2"
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402

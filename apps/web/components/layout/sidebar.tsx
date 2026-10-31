@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Dumbbell, LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
 
@@ -27,12 +27,27 @@ function Brand() {
   );
 }
 
+/**
+ * usePathname suspends during prerender on routes with unknown dynamic params
+ * (cacheComponents), so the links render first without the active highlight.
+ */
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const pathname = usePathname();
+  return (
+    <Suspense fallback={<NavLinkList pathname={null} onNavigate={onNavigate} />}>
+      <ActiveNavLinks onNavigate={onNavigate} />
+    </Suspense>
+  );
+}
+
+function ActiveNavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  return <NavLinkList pathname={usePathname()} onNavigate={onNavigate} />;
+}
+
+function NavLinkList({ pathname, onNavigate }: { pathname: string | null; onNavigate?: () => void }) {
   return (
     <nav aria-label="منوی اصلی" className="flex flex-col gap-1">
       {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href || pathname.startsWith(`${href}/`);
+        const active = !!pathname && (pathname === href || pathname.startsWith(`${href}/`));
         return (
           <Link
             key={href}

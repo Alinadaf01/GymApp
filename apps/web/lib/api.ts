@@ -17,6 +17,11 @@ async function errorMessage(res: Response): Promise<string> {
   try {
     const body = await res.json();
     if (typeof body?.detail === "string") return body.detail;
+    // Pydantic validation errors: show the first Persian message if present
+    if (Array.isArray(body?.detail)) {
+      const msg = body.detail.map((d: { msg?: string }) => d.msg ?? "").find((m: string) => /[\u0600-\u06FF]/.test(m));
+      if (msg) return msg.replace(/^Value error, /, "");
+    }
   } catch {
     // ignore non-JSON bodies
   }
@@ -33,11 +38,17 @@ async function errorMessage(res: Response): Promise<string> {
  */
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
   try {
     res = await fetch(`${API_BASE_URL}${path}`, {
       ...init,
       credentials: "include",
-      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch", ...init?.headers },
+      headers: {
+        // For FormData the browser sets multipart Content-Type with boundary
+        ...(isForm ? {} : { "Content-Type": "application/json" }),
+        "X-Requested-With": "fetch",
+        ...init?.headers,
+      },
     });
   } catch {
     throw new ApiError(0, GENERIC_ERROR);
@@ -54,4 +65,9 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
   if (!res.ok) throw new ApiError(res.status, await errorMessage(res));
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
+}
+
+/** Absolute URL for an authenticated API resource (e.g. a private image). */
+export function apiUrl(path: string): string {
+  return `${API_BASE_URL}${path}`;
 }

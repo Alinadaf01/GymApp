@@ -51,6 +51,7 @@ npm ci && npm run dev                         # http://localhost:3000
 ```bash
 cd apps/web
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase2.smoke.mjs
+E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase3.smoke.mjs   # روی دیتابیس توسعه؛ رکورد تستی می‌سازد
 ```
 
 ## حساب مربی
@@ -82,5 +83,15 @@ E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase2.smoke.mjs
 ```bash
 docker compose up -d --build
 ```
+
+نکات فعلی:
+
+- فایل‌های خصوصی (تصاویر و بعداً PDF) در `STORAGE_HOST_PATH` (پیش‌فرض `/data/basharnia`) ذخیره می‌شوند. کانتینر API با کاربر غیر root (UID `10001`) اجرا می‌شود، پس:
+
+```bash
+sudo mkdir -p /data/basharnia && sudo chown -R 10001:10001 /data/basharnia && sudo chmod 750 /data/basharnia
+```
+
+- جستجو به افزونه `pg_trgm` و مرتب‌سازی فارسی به collation `fa-x-icu` نیاز دارد. هر دو در image رسمی `postgres:16` موجودند و migration افزونه را فعال می‌کند.
 
 راهنمای کامل VPS، SSL، Vercel، بکاپ و Restore در فاز ۷ نوشته می‌شود.

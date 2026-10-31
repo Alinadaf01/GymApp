@@ -25,6 +25,8 @@ class Student(UUIDPk, Timestamps, Base):
     start_date: Mapped[date | None] = mapped_column(Date)
     coach_notes: Mapped[str | None] = mapped_column(Text)
     profile_photo_path: Mapped[str | None] = mapped_column(String(512))
+    # When the coach confirmed the student consented to photos being stored (spec §11)
+    photo_consent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[StudentStatus] = mapped_column(
         str_enum(StudentStatus, "student_status"),
         nullable=False,
@@ -37,4 +39,11 @@ class Student(UUIDPk, Timestamps, Base):
         Index("ix_students_name", "last_name", "first_name"),
         Index("ix_students_phone", "phone"),
         Index("ix_students_status", "status"),
+        # Trigram indexes for substring search on name / phone (pg_trgm)
+        Index("ix_students_first_name_trgm", "first_name", postgresql_using="gin",
+              postgresql_ops={"first_name": "gin_trgm_ops"}),
+        Index("ix_students_last_name_trgm", "last_name", postgresql_using="gin",
+              postgresql_ops={"last_name": "gin_trgm_ops"}),
+        Index("ix_students_phone_trgm", "phone", postgresql_using="gin",
+              postgresql_ops={"phone": "gin_trgm_ops"}),
     )

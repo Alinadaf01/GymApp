@@ -103,7 +103,7 @@ export function Dashboard() {
         actions={
           <>
             <Button asChild>
-              <Link href="/students">
+              <Link href="/students/new">
                 <Plus aria-hidden />
                 افزودن شاگرد
               </Link>

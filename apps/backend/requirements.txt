@@ -9,3 +9,5 @@ pydantic-settings==2.16.2
 argon2-cffi==25.1.0
 jdatetime==6.1.1
 tzdata==2026.6
+pillow==13.0.0
+python-multipart==0.0.32

@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
-import { ComingSoon } from "@/components/layout/coming-soon";
-import { PageHeader } from "@/components/layout/page-header";
+import { Suspense } from "react";
+import { StudentsList } from "@/components/students/students-list";
 
 export const metadata: Metadata = { title: "شاگردان | پنل مربی Basharnia" };
 
 export default function StudentsPage() {
   return (
-    <>
-      <PageHeader title="شاگردان" description="فهرست و پرونده شاگردان" />
-      <ComingSoon phase={3} />
-    </>
+    <Suspense>
+      <StudentsList />
+    </Suspense>
   );
 }

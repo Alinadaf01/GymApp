@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
+from app.api.students import router as students_router
 from app.auth.csrf import CSRFMiddleware
 from app.config import get_settings
 
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api")
     app.include_router(auth_router, prefix="/api")
     app.include_router(dashboard_router, prefix="/api")
+    app.include_router(students_router, prefix="/api")
     return app
 
 
