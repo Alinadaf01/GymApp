@@ -1,0 +1,10 @@
+[Unit]
+Description=Basharnia encrypted backup (database + files, local + off-site)
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/basharnia/infra/backup/backup.sh
+Nice=10
+IOSchedulingClass=idle

@@ -1,11 +1,23 @@
-# Rendered by the nginx image's envsubst at startup (${API_DOMAIN}, ${NGINX_MAX_BODY_MB})
+# Rendered by the nginx image's envsubst at startup (${API_DOMAIN}, ${NGINX_MAX_BODY_MB}).
+# Only the API runs behind this nginx; the panel is served by Vercel.
 
 # Edge rate limit for login (the API also enforces a persistent per-user/IP limit)
 limit_req_zone $binary_remote_addr zone=login:10m rate=10r/m;
+# General API limit (generous; protects against floods)
+limit_req_zone $binary_remote_addr zone=api:10m rate=20r/s;
+
+# Telegram delivers webhooks only from these networks (core.telegram.org/bots/webhooks).
+# Defense in depth: the webhook is also authenticated by its secret token.
+geo $telegram_source {
+    default 0;
+    149.154.160.0/20 1;
+    91.108.4.0/22 1;
+}
 
 server {
     listen 80;
     server_name ${API_DOMAIN};
+    server_tokens off;
 
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
@@ -24,35 +36,49 @@ server {
     ssl_certificate     /etc/letsencrypt/live/${API_DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${API_DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
 
     server_tokens off;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
     client_max_body_size ${NGINX_MAX_BODY_MB}m;
+    client_body_timeout 30s;
+
+    # nginx is the edge: OVERWRITE X-Forwarded-For with the real peer address.
+    # (Appending would let a client forge its IP and dodge per-IP rate limits.)
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_connect_timeout 10s;
+    proxy_read_timeout 120s;   # PDF generation; voice jobs run in the worker, not in-request
+    proxy_send_timeout 120s;
 
     location = /api/auth/login {
         limit_req zone=login burst=5 nodelay;
         limit_req_status 429;
         proxy_pass http://api:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /api/telegram/webhook {
+        if ($telegram_source = 0) {
+            return 403;
+        }
+        proxy_pass http://api:8000;
     }
 
     location /api/ {
+        limit_req zone=api burst=60 nodelay;
+        limit_req_status 429;
         proxy_pass http://api:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_connect_timeout 10s;
-        proxy_read_timeout 120s;   # PDF generation; voice jobs run async, not in-request
-        proxy_send_timeout 120s;
     }
 
     location / {

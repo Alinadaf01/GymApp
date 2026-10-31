@@ -2,10 +2,19 @@
 # Only nginx publishes ports; db and api stay on the internal network.
 name: basharnia
 
+# Rotate container logs so they cannot fill the disk
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    logging: *logging
+    # No published port: reachable only on the internal Docker network
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-basharnia}
       POSTGRES_USER: ${POSTGRES_USER:-basharnia}
@@ -32,6 +41,7 @@ services:
   api:
     build: ./apps/backend
     restart: unless-stopped
+    logging: *logging
     env_file: .env
     volumes:
       - ${STORAGE_HOST_PATH:-/data/basharnia}:/data/basharnia
@@ -49,6 +59,7 @@ services:
   worker:
     build: ./apps/backend
     restart: unless-stopped
+    logging: *logging
     env_file: .env
     environment:
       WHISPER_MODEL_DIR: /models
@@ -71,13 +82,15 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    logging: *logging
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
       - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot-webroot:/var/www/certbot:ro
+      # ACME webroot on the host: certbot (installed on the host) renews certificates here
+      - /var/www/certbot:/var/www/certbot:ro
     environment:
       API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
       NGINX_MAX_BODY_MB: ${MAX_UPLOAD_MB:-20}
@@ -87,7 +100,6 @@ services:
 volumes:
   pgdata:
   whisper-models:
-  certbot-webroot:
 
 networks:
   internal:

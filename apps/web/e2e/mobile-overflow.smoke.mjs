@@ -1,4 +1,5 @@
-// Every panel page at phone width must fit the screen (no horizontal page scroll).
+// Every panel page at phone width must fit the screen (no horizontal page scroll),
+// load without CSP violations or console errors.
 //   E2E_USERNAME=coach E2E_PASSWORD=... node e2e/mobile-overflow.smoke.mjs
 // Uses a plain 390px viewport (no mobile emulation: emulation widens the layout
 // viewport to fit overflowing content, which hides the bug).
@@ -14,6 +15,11 @@ const WIDTH = 390;
 const browser = await chromium.launch();
 try {
   const page = await (await browser.newContext({ viewport: { width: WIDTH, height: 844 } })).newPage();
+  // Also: no Content-Security-Policy violations or console errors on any page
+  const consoleProblems = [];
+  page.on("console", (m) => {
+    if (m.type() === "error" || /Content Security Policy/i.test(m.text())) consoleProblems.push(`${page.url()}: ${m.text()}`);
+  });
   await page.goto(`${BASE}/login`);
   await page.fill("#username", process.env.E2E_USERNAME);
   await page.fill("#password", process.env.E2E_PASSWORD);
@@ -45,6 +51,8 @@ try {
   }
   assert.deepEqual(failures, [], failures.join("\n"));
   console.log(`✓ ${routes.length} pages fit ${WIDTH}px`);
+  assert.deepEqual(consoleProblems, [], consoleProblems.join("\n"));
+  console.log("✓ no CSP violations or console errors");
   console.log("ALL PASSED");
 } finally {
   await browser.close();

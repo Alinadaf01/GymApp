@@ -79,6 +79,10 @@ class Settings(BaseSettings):
             raise RuntimeError(f"Missing required environment variables: {', '.join(missing)}")
         if len(self.app_secret_key) < 32:
             raise RuntimeError("APP_SECRET_KEY must be at least 32 characters in production")
+        if "devpass" in self.database_url or "localhost" in self.database_url:
+            raise RuntimeError("DATABASE_URL still has the development default")
+        if not self.frontend_url.startswith("https://"):
+            raise RuntimeError("FRONTEND_URL must be https:// in production (CORS + secure cookies)")
 
 
 @lru_cache

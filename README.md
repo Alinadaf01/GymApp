@@ -5,15 +5,23 @@ CRM سبک تک‌مربی برای مجموعه ورزشی Basharnia: پرون�
 
 - سند مرجع نیازمندی‌ها: [`PROJECT_SPEC.md`](PROJECT_SPEC.md)
 - وضعیت پیاده‌سازی و نتایج تست: [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md)
+- **استقرار روی VPS و Vercel:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- **بکاپ و بازیابی:** [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md)
+- **امنیت:** [`docs/SECURITY.md`](docs/SECURITY.md)
+- **گزارش تست‌های پذیرش:** [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md)
 
 ## ساختار
 
 ```text
 apps/web/       پنل Next.js (TypeScript, Tailwind) — میزبانی روی Vercel
 apps/backend/   FastAPI + SQLAlchemy 2 + Alembic — اجرا روی VPS
-infra/nginx/    قالب Nginx (TLS، reverse proxy، هدرهای امنیتی)
-infra/scripts/  اسکریپت‌های نصب/بکاپ (فازهای بعد)
-docker-compose.yml  پشته VPS: db، migrate، api، nginx
+infra/nginx/    قالب Nginx (TLS، reverse proxy، هدرهای امنیتی، rate limit)
+infra/scripts/  آماده‌سازی و ایمن‌سازی VPS، گواهی SSL
+infra/backup/   بکاپ رمزگذاری‌شده، بازیابی، تمرین بازیابی
+infra/systemd/  تایمر بکاپ روزانه
+infra/tests/    تست‌های nginx، Stack کامل Docker و بکاپ/بازیابی
+docs/           راهنماهای استقرار، بکاپ، امنیت و گزارش پذیرش
+docker-compose.yml  پشته VPS: db، migrate، api، worker، nginx
 ```
 
 ## اجرای محلی (توسعه)
@@ -114,21 +122,12 @@ docker compose run --rm api python -m app.cli webhook-info
 
 ## استقرار
 
-`.env.example` را به `.env` کپی و مقادیر را پر کنید، سپس:
+راهنمای کامل گام‌به‌گام: **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)** (آماده‌سازی و ایمن‌سازی VPS، `.env`، SSL، اجرای سرویس‌ها، حساب مربی، مدل Whisper و ربات، Vercel، بکاپ و چک‌لیست نهایی).
+
+خلاصه روی VPS (پس از `infra/scripts/setup-vps.sh` و پر کردن `.env`):
 
 ```bash
-docker compose up -d --build
+docker compose build && docker compose up -d
 ```
 
-نکات فعلی:
-
-- فایل‌های خصوصی (تصاویر و بعداً PDF) در `STORAGE_HOST_PATH` (پیش‌فرض `/data/basharnia`) ذخیره می‌شوند. کانتینر API با کاربر غیر root (UID `10001`) اجرا می‌شود، پس:
-
-```bash
-sudo mkdir -p /data/basharnia && sudo chown -R 10001:10001 /data/basharnia && sudo chmod 750 /data/basharnia
-```
-
-- PDF با Chromium (Playwright) داخل کانتینر API ساخته می‌شود. Chromium هنگام build image نصب می‌شود (`playwright install --with-deps chromium`) و نسخه‌اش با پکیج `playwright` در `requirements.txt` قفل است. در توسعه محلی یک‌بار `python -m playwright install chromium` را اجرا کنید. برای تست‌های PDF، ابزار `pdftotext` (بسته `poppler-utils`) لازم است.
-- جستجو به افزونه `pg_trgm` و مرتب‌سازی فارسی به collation `fa-x-icu` نیاز دارد. هر دو در image رسمی `postgres:16` موجودند و migration افزونه را فعال می‌کند.
-
-راهنمای کامل VPS، SSL، Vercel، بکاپ و Restore در فاز ۷ نوشته می‌شود.
+فایل‌های خصوصی در `STORAGE_HOST_PATH` (پیش‌فرض `/data/basharnia`) ذخیره می‌شوند و کانتینرها با کاربر غیر root (UID `10001`) اجرا می‌شوند؛ اسکریپت آماده‌سازی مجوزها را تنظیم می‌کند.
