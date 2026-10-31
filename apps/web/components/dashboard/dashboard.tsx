@@ -136,7 +136,7 @@ export function Dashboard() {
         <StatCard label="برنامه‌های این ماه" value={summary?.programs_this_month} icon={CalendarCheck} />
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>آخرین شاگردان</CardTitle>

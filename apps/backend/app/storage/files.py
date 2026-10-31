@@ -52,6 +52,22 @@ def write_bytes(relative_dir: str, extension: str, data: bytes) -> str:
     return f"{relative_dir.rstrip('/')}/{name}"
 
 
+def write_beside(relative_path: str, suffix: str, data: bytes) -> str:
+    """Write a companion file next to an existing one (e.g. a thumbnail)."""
+    target = companion_path(relative_path, suffix)
+    full = resolve(target)
+    tmp = full.with_name(f".{full.name}.tmp")
+    tmp.write_bytes(data)
+    os.chmod(tmp, 0o640)
+    os.replace(tmp, full)
+    return target
+
+
+def companion_path(relative_path: str, suffix: str) -> str:
+    stem, dot, ext = relative_path.rpartition(".")
+    return f"{stem}.{suffix}.{ext}" if dot else f"{relative_path}.{suffix}"
+
+
 def delete(relative_path: str | None) -> None:
     if not relative_path:
         return

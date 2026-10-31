@@ -218,3 +218,29 @@ export type PdfTemplate = {
   footer_text: string;
   has_logo: boolean;
 };
+
+export type PhotoView = "front" | "back" | "side";
+
+export type ProgressPhoto = {
+  id: string;
+  capture_date: string;
+  view_type: PhotoView;
+  notes: string | null;
+  created_at: string;
+  url: string;
+  thumb_url: string;
+};
+
+export type Measurement = {
+  id: string;
+  measured_at: string;
+  weight_kg: string | null;
+  arm_cm: string | null;
+  chest_cm: string | null;
+  waist_cm: string | null;
+  abdomen_cm: string | null;
+  thigh_cm: string | null;
+  hip_cm: string | null;
+  notes: string | null;
+  created_at: string;
+};

@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from decimal import Decimal
 
-from sqlalchemy import Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Date, ForeignKey, Index, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,7 +21,11 @@ class ProgressPhoto(UUIDPk, CreatedAt, Base):
     file_path: Mapped[str] = mapped_column(String(512), nullable=False)
     notes: Mapped[str | None] = mapped_column(Text)
 
-    __table_args__ = (Index("ix_progress_photos_student_date", "student_id", "capture_date"),)
+    __table_args__ = (
+        Index("ix_progress_photos_student_date", "student_id", "capture_date"),
+        # one photo per view per date: makes "compare two dates" unambiguous
+        UniqueConstraint("student_id", "capture_date", "view_type", name="uq_progress_photos_student_date_view"),
+    )
 
 
 class BodyMeasurement(UUIDPk, CreatedAt, Base):

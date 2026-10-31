@@ -76,7 +76,7 @@ try {
   await mp.click("button[type=submit]");
   await mp.waitForURL(/\/dashboard$/);
   await mp.waitForFunction(() => !document.querySelector('[data-slot="skeleton"]'));
-  assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "no horizontal scroll");
+  assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= 390 /* real phone width; mobile emulation widens innerWidth to fit overflow */), "no horizontal scroll");
   if (SHOTS) await mp.screenshot({ path: `${SHOTS}/dashboard-mobile.png`, fullPage: true });
   await mp.getByRole("button", { name: "باز کردن منو" }).click();
   await mp.getByRole("dialog").waitFor();

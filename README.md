@@ -56,6 +56,8 @@ E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase2.smoke.mjs
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase3.smoke.mjs   # روی دیتابیس توسعه؛ رکورد تستی می‌سازد
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase4.smoke.mjs   # برنامه‌ها و PDF
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase5.smoke.mjs   # فرهنگ لغت و برنامه از ویس
+E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase6.smoke.mjs   # عکس پیشرفت، اندازه‌ها، نمودار
+E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/mobile-overflow.smoke.mjs   # همه صفحات در عرض ۳۹۰px
 ```
 
 ## ربات تلگرام و تبدیل ویس

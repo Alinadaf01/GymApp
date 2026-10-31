@@ -213,7 +213,7 @@ try {
   for (const url of [`/programs/${programId}`, `/programs`, `/programs/new`, `/settings`]) {
     await mp.goto(`${BASE}${url}`);
     await mp.waitForLoadState("networkidle");
-    assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `no h-scroll ${url}`);
+    assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= 390 /* real phone width; mobile emulation widens innerWidth to fit overflow */), `no h-scroll ${url}`);
   }
   // an editable program on mobile
   const dup = await mp.evaluate(async ([api, id]) => {
@@ -223,7 +223,7 @@ try {
   }, [API, programId]);
   await mp.goto(`${BASE}/programs/${dup.id}/edit`);
   await vis(mp.getByTestId("exercise-row")).first().waitFor();
-  assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "no h-scroll editor");
+  assert.ok(await mp.evaluate(() => document.documentElement.scrollWidth <= 390 /* real phone width; mobile emulation widens innerWidth to fit overflow */), "no h-scroll editor");
   if (SHOTS) await mp.screenshot({ path: `${SHOTS}/p4-editor-mobile.png`, fullPage: true });
   step("mobile: program pages and editor have no horizontal scroll");
   await m.close();

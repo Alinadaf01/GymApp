@@ -206,7 +206,7 @@ export function StudentsList() {
       {data && data.items.length > 0 && (
         <>
           {/* Desktop table */}
-          <Card className="hidden overflow-hidden py-0 md:flex">
+          <Card className="relative hidden overflow-hidden py-0 md:flex">
             <table className="w-full text-sm">
               <thead className="border-b bg-muted/50 text-right text-xs text-muted-foreground">
                 <tr>

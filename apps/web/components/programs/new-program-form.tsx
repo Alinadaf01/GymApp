@@ -209,7 +209,7 @@ function NewProgramFormInner({ studentParam, typeParam }: { studentParam: string
 
       <Card>
         <CardHeader><CardTitle>۳. مشخصات</CardTitle></CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-2 sm:col-span-3">
             <Label htmlFor="program-title">عنوان</Label>
             <Input id="program-title" value={effectiveTitle} maxLength={200}

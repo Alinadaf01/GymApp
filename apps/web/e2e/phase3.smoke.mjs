@@ -195,7 +195,7 @@ try {
     await mp.goto(`${BASE}${url}`);
     await mp.waitForLoadState("networkidle");
     assert.ok(
-      await mp.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      await mp.evaluate(() => document.documentElement.scrollWidth <= 390 /* real phone width; mobile emulation widens innerWidth to fit overflow */),
       `no horizontal scroll on ${url}`,
     );
   }

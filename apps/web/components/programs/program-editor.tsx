@@ -409,7 +409,7 @@ export function ProgramEditor({ program }: { program: Program }) {
             مشخصات برنامه {programTypeLabel[type]} — {program.student.full_name}
           </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="عنوان" htmlFor={`${uid}-title`} error={errors.title} className="sm:col-span-2">
             <Input {...f("title")} maxLength={200} />
           </Field>

@@ -119,7 +119,7 @@ export function PdfTemplateForm() {
                 aria-label="فایل لوگو" onChange={uploadLogo} />
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
               <Label htmlFor="club_name">نام باشگاه</Label>
               <Input id="club_name" value={tpl.club_name} onChange={set("club_name")} maxLength={100} />

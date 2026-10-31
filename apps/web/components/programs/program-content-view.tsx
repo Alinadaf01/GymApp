@@ -17,7 +17,7 @@ function ExerciseTable({ exercises }: { exercises: Exercise[] }) {
   const timed = exercises.some((e) => e.duration_seconds !== null);
   const distanced = exercises.some((e) => e.distance_value !== null);
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[640px] text-sm">
         <thead className="bg-muted/50 text-right text-xs text-muted-foreground">
           <tr>
@@ -56,7 +56,7 @@ function ExerciseTable({ exercises }: { exercises: Exercise[] }) {
 
 function SimpleTable({ head, rows }: { head: string[]; rows: (React.ReactNode | null)[][] }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <table className="w-full min-w-[560px] text-sm">
         <thead className="bg-muted/50 text-right text-xs text-muted-foreground">
           <tr>

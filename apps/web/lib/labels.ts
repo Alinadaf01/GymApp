@@ -1,4 +1,4 @@
-import type { ExecutionType, Gender, ProgramStatus, ProgramType, StudentStatus } from "./types";
+import type { ExecutionType, Gender, PhotoView, ProgramStatus, ProgramType, StudentStatus } from "./types";
 
 export const studentStatusLabel: Record<StudentStatus, string> = {
   active: "فعال",
@@ -24,6 +24,20 @@ export const programStatusLabel: Record<ProgramStatus, string> = {
   approved: "تأییدشده",
   archived: "بایگانی",
 };
+
+export const photoViewLabel: Record<PhotoView, string> = { front: "روبه‌رو", back: "پشت", side: "نیم‌رخ" };
+export const PHOTO_VIEWS: PhotoView[] = ["front", "back", "side"];
+
+export const MEASUREMENT_FIELDS = [
+  { key: "weight_kg", label: "وزن", unit: "کیلوگرم" },
+  { key: "arm_cm", label: "دور بازو", unit: "سانتی‌متر" },
+  { key: "chest_cm", label: "دور سینه", unit: "سانتی‌متر" },
+  { key: "waist_cm", label: "دور کمر", unit: "سانتی‌متر" },
+  { key: "abdomen_cm", label: "دور شکم", unit: "سانتی‌متر" },
+  { key: "thigh_cm", label: "دور ران", unit: "سانتی‌متر" },
+  { key: "hip_cm", label: "دور باسن", unit: "سانتی‌متر" },
+] as const;
+export type MeasurementKey = (typeof MEASUREMENT_FIELDS)[number]["key"];
 
 export const executionTypeLabel: Record<ExecutionType, string> = {
   reps: "تکرار",
@@ -70,6 +84,9 @@ const activityLabels: Record<string, string> = {
   "pdf.generated": "PDF تولید شد",
   "photo.uploaded": "عکس پیشرفت ثبت شد",
   "measurement.created": "اندازه‌های بدن ثبت شد",
+  "measurement.updated": "اندازه‌گیری ویرایش شد",
+  "measurement.deleted": "اندازه‌گیری حذف شد",
+  "photo.deleted": "عکس پیشرفت حذف شد",
 };
 
 export function activityLabel(action: string): string {

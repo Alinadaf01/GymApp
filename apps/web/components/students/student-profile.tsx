@@ -16,7 +16,6 @@ import {
   UserRound,
 } from "lucide-react";
 
-import { ComingSoon } from "@/components/layout/coming-soon";
 import { ProgramStatusBadge } from "@/components/programs/program-status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -25,9 +24,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import { formatJalaliDate, formatNumber, toPersianDigits } from "@/lib/format";
-import { activityLabel, genderLabel, programTypeLabel, studentFieldLabel } from "@/lib/labels";
-import type { Activity, ProgramSummary, Student } from "@/lib/types";
+import { activityLabel, genderLabel, photoViewLabel, programTypeLabel, studentFieldLabel } from "@/lib/labels";
+import type { Activity, PhotoView, ProgramSummary, Student } from "@/lib/types";
 import { ArchiveButton } from "./archive-button";
+import { Measurements } from "./measurements";
+import { ProgressPhotos } from "./progress-photos";
 import { StudentAvatar } from "./student-avatar";
 import { StudentStatusBadge } from "./student-status-badge";
 import { useStudent } from "./use-student";
@@ -123,10 +124,16 @@ function ActivityList({ items }: { items: Activity[] }) {
     <ol className="relative flex flex-col gap-4 border-r pr-4">
       {items.map((a) => {
         const fields = Array.isArray(a.meta?.fields) ? (a.meta.fields as string[]) : [];
+        const view = typeof a.meta?.view === "string" ? photoViewLabel[a.meta.view as PhotoView] : null;
+        const onDate = typeof a.meta?.date === "string" ? formatJalaliDate(a.meta.date) : null;
         return (
           <li key={a.id} className="relative">
             <span className="absolute top-1.5 -right-[21px] size-2.5 rounded-full border-2 border-card bg-primary" aria-hidden />
-            <p className="text-sm font-medium">{activityLabel(a.action)}</p>
+            <p className="text-sm font-medium">
+              {activityLabel(a.action)}
+              {view && ` (${view})`}
+              {onDate && <span className="font-normal text-muted-foreground"> — تاریخ {onDate}</span>}
+            </p>
             {fields.length > 0 && (
               <p className="text-xs text-muted-foreground">
                 تغییر در: {fields.map((f) => studentFieldLabel[f] ?? f).join("، ")}
@@ -142,7 +149,7 @@ function ActivityList({ items }: { items: Activity[] }) {
 
 function Overview({ student, activity }: { student: Student; activity: Activity[] | null }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
       <Card className="lg:col-span-2">
         <CardHeader>
           <CardTitle>مشخصات</CardTitle>
@@ -243,6 +250,11 @@ export function StudentProfile() {
   const { student, setStudent, error } = useStudent(id);
   const [activity, setActivity] = useState<Activity[] | null>(null);
 
+  // Photos/measurements change the header (current weight) and the history
+  function reload() {
+    apiFetch<Student>(`/api/students/${id}`).then(setStudent).catch(() => undefined);
+  }
+
   useEffect(() => {
     if (!student) return;
     apiFetch<Activity[]>(`/api/students/${id}/activity`)
@@ -307,10 +319,11 @@ export function StudentProfile() {
           <Programs studentId={student.id} archived={student.status === "archived"} />
         </TabsContent>
         <TabsContent value="photos">
-          <ComingSoon phase={6} />
+          <ProgressPhotos studentId={student.id} consentRecorded={!!student.photo_consent_at}
+            archived={student.status === "archived"} onChanged={reload} />
         </TabsContent>
         <TabsContent value="trends">
-          <ComingSoon phase={6} />
+          <Measurements studentId={student.id} onChanged={reload} />
         </TabsContent>
         <TabsContent value="history">
           <Card>

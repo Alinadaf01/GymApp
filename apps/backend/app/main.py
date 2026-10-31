@@ -6,6 +6,7 @@ from app.api.dashboard import router as dashboard_router
 from app.api.dictionary import router as dictionary_router
 from app.api.health import router as health_router
 from app.api.programs import router as programs_router
+from app.api.progress import router as progress_router
 from app.api.settings import router as settings_router
 from app.api.students import router as students_router
 from app.api.telegram import router as telegram_router
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
     app.include_router(students_router, prefix="/api")
     app.include_router(dictionary_router, prefix="/api")  # before /exercises/{exercise_id}
     app.include_router(programs_router, prefix="/api")
+    app.include_router(progress_router, prefix="/api")
     app.include_router(settings_router, prefix="/api")
     app.include_router(telegram_router, prefix="/api")
     return app

@@ -236,7 +236,7 @@ export function StudentForm({ student }: { student?: Student }) {
           <CardTitle>مشخصات پایه</CardTitle>
           <CardDescription>فقط نام و نام خانوادگی الزامی است.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field id="first_name" label="نام" required error={errors.first_name}>
             <Input {...inputProps("first_name")} autoComplete="off" maxLength={100} required />
           </Field>
@@ -280,7 +280,7 @@ export function StudentForm({ student }: { student?: Student }) {
         <CardHeader>
           <CardTitle>اطلاعات جسمی</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
+        <CardContent className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Field id="height_cm" label="قد (سانتی‌متر)" error={errors.height_cm}>
             <Input {...inputProps("height_cm")} inputMode="decimal" dir="ltr" />
           </Field>
