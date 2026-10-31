@@ -32,6 +32,20 @@ class Settings(BaseSettings):
 
     timezone: str = Field(default="Asia/Tehran")
 
+    session_ttl_hours: int = Field(default=168)  # 7 days
+    login_max_failures_per_user: int = Field(default=5)
+    login_max_failures_per_ip: int = Field(default=20)
+    login_window_minutes: int = Field(default=15)
+
+    @property
+    def cookie_secure(self) -> bool:
+        return self.is_production
+
+    @property
+    def session_cookie_name(self) -> str:
+        # __Host- prefix: browser enforces Secure, Path=/ and no Domain (production only)
+        return "__Host-basharnia_session" if self.cookie_secure else "basharnia_session"
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"

@@ -32,6 +32,48 @@ def migrated_db():
     command.downgrade(cfg, "base")
 
 
+@pytest.fixture(autouse=True)
+def clean_tables(migrated_db):
+    """Each test starts from empty tables (API endpoints commit)."""
+    from sqlalchemy import text
+
+    from app.database import engine
+    from app.database.base import Base
+
+    names = ", ".join(t.name for t in Base.metadata.sorted_tables)
+    with engine.begin() as conn:
+        conn.execute(text(f"TRUNCATE {names} RESTART IDENTITY CASCADE"))
+    yield
+
+
+PASSWORD = "correct-horse-battery"
+
+
+@pytest.fixture()
+def admin():
+    from app.auth.passwords import hash_password
+    from app.database import SessionLocal
+    from app.models import User
+
+    with SessionLocal() as s:
+        user = User(username="coach", password_hash=hash_password(PASSWORD))
+        s.add(user)
+        s.commit()
+        return user
+
+
+@pytest.fixture()
+def auth_client(client, admin):
+    r = client.post(
+        "/api/auth/login",
+        json={"username": "coach", "password": PASSWORD},
+        headers={"X-Requested-With": "fetch"},
+    )
+    assert r.status_code == 200
+    client.headers["X-Requested-With"] = "fetch"
+    return client
+
+
 @pytest.fixture()
 def db():
     from app.database import SessionLocal

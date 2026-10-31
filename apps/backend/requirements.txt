@@ -7,3 +7,5 @@ psycopg[binary]==3.3.6
 pydantic==2.14.2
 pydantic-settings==2.16.2
 argon2-cffi==25.1.0
+jdatetime==6.1.1
+tzdata==2026.6

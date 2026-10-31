@@ -32,3 +32,11 @@ export function formatJalaliDate(input: string | Date | null | undefined): strin
   const pad = (n: number) => String(n).padStart(2, "0");
   return toPersianDigits(`${jy}/${pad(jm)}/${pad(jd)}`);
 }
+
+/** Format a number with Persian digits and grouping, e.g. 1250 -> "۱٬۲۵۰". */
+export function formatNumber(value: number | string | null | undefined, fractionDigits = 1): string {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = typeof value === "number" ? value : Number(value);
+  if (Number.isNaN(n)) return "—";
+  return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: fractionDigits }).format(n);
+}

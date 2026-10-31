@@ -1,38 +1,70 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 /*
- * Brand tokens. Placeholder values — to be replaced with colors taken from
- * the official Basharnia letterhead once the coach confirms them (spec §22).
+ * Design tokens (shadcn/ui naming). Brand colors are placeholders until the
+ * official Basharnia letterhead colors are confirmed (spec §22).
  */
 :root {
-  --background: #f7f8fa;
-  --surface: #ffffff;
+  --radius: 0.75rem;
+  --background: #f6f7f9;
   --foreground: #1a1d23;
-  --muted: #5d6573;
-  --border: #e3e6eb;
+  --card: #ffffff;
+  --card-foreground: #1a1d23;
+  --popover: #ffffff;
+  --popover-foreground: #1a1d23;
   --primary: #1f4e79;
   --primary-foreground: #ffffff;
+  --secondary: #eef1f5;
+  --secondary-foreground: #1a1d23;
+  --muted: #eef1f5;
+  --muted-foreground: #5d6573;
+  --accent: #e8eef6;
+  --accent-foreground: #1f4e79;
+  --destructive: #b42318;
   --success: #1e7a4c;
-  --danger: #b42318;
+  --border: #e3e6eb;
+  --input: #d5dae1;
+  --ring: #1f4e79;
 }
 
 @theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
   --color-background: var(--background);
-  --color-surface: var(--surface);
   --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
   --color-success: var(--success);
-  --color-danger: var(--danger);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
   --font-sans: var(--font-vazirmatn), Tahoma, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
 }
 
 /* Keep Latin/number runs readable inside RTL text */
