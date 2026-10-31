@@ -36,6 +36,8 @@ alembic upgrade head
 python -m app.cli create-admin               # ساخت حساب مربی (یک‌بار؛ رمز پرسیده می‌شود)
 uvicorn app.main:app --reload --port 8000    # http://localhost:8000/api/health
 python -m pytest                              # از basharnia_test استفاده می‌کند
+# تست واقعی Whisper (اختیاری؛ مدل و espeak-ng لازم است):
+WHISPER_TEST_MODEL_DIR=./data/models python -m pytest tests/test_whisper_integration.py
 ```
 
 ```bash
@@ -53,7 +55,38 @@ cd apps/web
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase2.smoke.mjs
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase3.smoke.mjs   # روی دیتابیس توسعه؛ رکورد تستی می‌سازد
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase4.smoke.mjs   # برنامه‌ها و PDF
+E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase5.smoke.mjs   # فرهنگ لغت و برنامه از ویس
 ```
+
+## ربات تلگرام و تبدیل ویس
+
+معماری: Webhook تلگرام در خود API است (`POST /api/telegram/webhook`). سرویس جداگانه `worker` (همان image با دستور `python -m app.worker`) ویس را دانلود می‌کند، با FFmpeg تبدیل می‌کند، با **Faster-Whisper محلی** به متن تبدیل می‌کند (بدون هیچ API پولی) و با Parser فارسی ساختاردهی می‌کند. صف کارها در PostgreSQL است و با Restart از بین نمی‌رود.
+
+راه‌اندازی (یک‌بار):
+
+1. در تلگرام با [@BotFather](https://t.me/BotFather) ربات بسازید و Token را در `TELEGRAM_BOT_TOKEN` بگذارید.
+2. شناسه عددی تلگرام مربی را (مثلاً با ربات @userinfobot) در `TELEGRAM_ALLOWED_USER_ID` بگذارید. Username به‌تنهایی مجوز حساب نمی‌شود.
+3. یک Secret تصادفی ۲۴+ کاراکتری در `TELEGRAM_WEBHOOK_SECRET` بگذارید.
+4. مدل Whisper را یک‌بار در Volume دائمی دانلود کنید (حدود ۴۶۰ مگابایت برای `small`):
+
+```bash
+docker compose run --rm worker python -m app.cli download-whisper-model
+```
+
+5. پس از فعال شدن HTTPS روی `API_BASE_URL`، Webhook را ثبت کنید:
+
+```bash
+docker compose run --rm api python -m app.cli set-webhook
+```
+
+```bash
+docker compose run --rm api python -m app.cli webhook-info
+```
+
+نکات:
+- صوت خام به‌طور پیش‌فرض بلافاصله پس از پردازش حذف می‌شود (`AUDIO_RETAIN_HOURS=0`). متن خام Whisper همیشه در `voice_records` نگه داشته می‌شود.
+- `WHISPER_VOCAB_HINT` به‌طور پیش‌فرض خاموش است (توضیح در `IMPLEMENTATION_STATUS.md`، فاز ۵).
+- آزمون محلی بدون تلگرام واقعی (فقط توسعه): `scripts/fake_telegram_api.py` و `scripts/e2e_telegram_flow.py`.
 
 ## حساب مربی
 

@@ -24,7 +24,12 @@ class VoiceRecord(UUIDPk, CreatedAt, Base):
     telegram_file_id: Mapped[str | None] = mapped_column(String(255))
     telegram_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     audio_path: Mapped[str | None] = mapped_column(String(512))
+    # Job context chosen by the coach in the bot before sending the voice
+    program_type: Mapped[str | None] = mapped_column(String(32))
+    session_title: Mapped[str | None] = mapped_column(String(200))
     transcript_raw: Mapped[str | None] = mapped_column(Text)
+    # Text the coach sent to correct the transcript (raw transcript is kept)
+    corrected_text: Mapped[str | None] = mapped_column(Text)
     parsed_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     processing_status: Mapped[VoiceStatus] = mapped_column(
         str_enum(VoiceStatus, "voice_status"),
@@ -35,6 +40,7 @@ class VoiceRecord(UUIDPk, CreatedAt, Base):
     error_message: Mapped[str | None] = mapped_column(Text)
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     duration_seconds: Mapped[int | None] = mapped_column(Integer)
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

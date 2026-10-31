@@ -79,7 +79,7 @@
   {% if program.program_type.value == "workout" %}
     {% for s in program.sessions %}
     <section>
-      <h2>جلسه {{ ordinal(loop.index) }}: {{ s.title }}</h2>
+      <h2>{% if s.title.startswith("جلسه") %}{{ s.title }}{% else %}جلسه {{ ordinal(loop.index) }}: {{ s.title }}{% endif %}</h2>
       {% set timed = s.exercises | selectattr("duration_seconds") | list %}
       {% set distanced = s.exercises | selectattr("distance_value", "ne", none) | list %}
       <table>

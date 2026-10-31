@@ -74,13 +74,68 @@ def reset_password() -> None:
         print(f"رمز عبور «{user.username}» تغییر کرد و همه نشست‌ها باطل شدند.")
 
 
+def download_whisper_model() -> None:
+    """Install step: fetch the Whisper model into WHISPER_MODEL_DIR (persistent volume)."""
+    from app.config import get_settings
+    from app.transcription.whisper import WhisperTranscriber
+
+    s = get_settings()
+    print(f"Downloading Whisper '{s.whisper_model}' into {s.whisper_model_dir} …")
+    WhisperTranscriber().load()
+    print("Done.")
+
+
+def _bot():
+    from app.config import get_settings
+    from app.telegram.client import TelegramClient
+
+    return TelegramClient(get_settings().telegram_bot_token)
+
+
+def set_webhook() -> None:
+    from app.config import get_settings
+
+    s = get_settings()
+    if not s.telegram_webhook_secret or len(s.telegram_webhook_secret) < 24:
+        sys.exit("TELEGRAM_WEBHOOK_SECRET must be set (at least 24 characters).")
+    if s.telegram_allowed_user_id is None:
+        sys.exit("TELEGRAM_ALLOWED_USER_ID must be set.")
+    url = s.api_base_url.rstrip("/") + "/api/telegram/webhook"
+    if not url.startswith("https://"):
+        sys.exit("API_BASE_URL must be https:// for a Telegram webhook.")
+    _bot().set_webhook(url, s.telegram_webhook_secret)
+    print(f"Webhook set: {url}")
+
+
+def webhook_info() -> None:
+    info = _bot().get_webhook_info()
+    print({k: v for k, v in info.items() if k in ("url", "pending_update_count", "last_error_message",
+                                                   "last_error_date", "max_connections")})
+
+
+def delete_webhook() -> None:
+    _bot().delete_webhook()
+    print("Webhook deleted.")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("create-admin", help="ساخت حساب مدیر (فقط یک‌بار)")
     sub.add_parser("reset-password", help="تعیین رمز جدید برای حساب مدیر")
+    sub.add_parser("download-whisper-model", help="دانلود مدل Whisper در پوشه دائمی")
+    sub.add_parser("set-webhook", help="ثبت Webhook تلگرام")
+    sub.add_parser("webhook-info", help="وضعیت Webhook تلگرام")
+    sub.add_parser("delete-webhook", help="حذف Webhook تلگرام")
     args = parser.parse_args(argv)
-    {"create-admin": create_admin, "reset-password": reset_password}[args.command]()
+    {
+        "create-admin": create_admin,
+        "reset-password": reset_password,
+        "download-whisper-model": download_whisper_model,
+        "set-webhook": set_webhook,
+        "webhook-info": webhook_info,
+        "delete-webhook": delete_webhook,
+    }[args.command]()
 
 
 if __name__ == "__main__":

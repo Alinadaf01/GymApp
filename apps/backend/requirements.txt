@@ -13,3 +13,7 @@ pillow==13.0.0
 python-multipart==0.0.32
 Jinja2==3.1.6
 playwright==1.63.0
+faster-whisper==1.2.1
+# faster-whisper 1.2.1 passes an argument removed in av 19
+av==18.1.0
+httpx==0.28.1

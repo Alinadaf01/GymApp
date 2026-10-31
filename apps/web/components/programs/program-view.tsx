@@ -11,6 +11,7 @@ import {
   Copy,
   FilePlus2,
   Loader2,
+  Mic,
   Pencil,
   Trash2,
   TriangleAlert,
@@ -18,6 +19,7 @@ import {
 import { toast } from "sonner";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmButton } from "@/components/ui/confirm-button";
@@ -135,6 +137,12 @@ export function ProgramView() {
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                 <ProgramStatusBadge status={program.status} />
                 <span>برنامه {programTypeLabel[program.program_type]}</span>
+                {program.source_voice_record_id && (
+                  <Badge variant="outline">
+                    <Mic aria-hidden />
+                    از ویس تلگرام
+                  </Badge>
+                )}
                 <span aria-hidden>·</span>
                 <Link href={`/students/${program.student.id}`} className="hover:underline">
                   {program.student.full_name}

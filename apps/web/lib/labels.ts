@@ -66,6 +66,7 @@ const activityLabels: Record<string, string> = {
   "program.draft_deleted": "پیش‌نویس برنامه حذف شد",
   "settings.pdf_template_updated": "تنظیمات سربرگ PDF تغییر کرد",
   "settings.logo_updated": "لوگو تغییر کرد",
+  "dictionary.created": "حرکت به فرهنگ لغت اضافه شد",
   "pdf.generated": "PDF تولید شد",
   "photo.uploaded": "عکس پیشرفت ثبت شد",
   "measurement.created": "اندازه‌های بدن ثبت شد",

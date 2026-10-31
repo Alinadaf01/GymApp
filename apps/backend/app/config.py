@@ -26,6 +26,19 @@ class Settings(BaseSettings):
     whisper_device: str = Field(default="cpu")
     whisper_compute_type: str = Field(default="int8")
     audio_max_duration_seconds: int = Field(default=900)
+    whisper_model_dir: Path = Field(default=Path("./data/models"))  # persistent volume in production
+    whisper_beam_size: int = Field(default=5)
+    # Exercise-name hint for Whisper. Off by default: in tests it improved names but
+    # also made Whisper output exercises that were never said. Enable only after
+    # evaluating with the coach's real voices (spec §8.4).
+    whisper_vocab_hint: bool = Field(default=False)
+    # Raw audio is deleted right after processing by default (0 = do not retain)
+    audio_retain_hours: int = Field(default=0)
+    worker_poll_seconds: float = Field(default=2.0)
+    voice_max_attempts: int = Field(default=3)
+    voice_stale_minutes: int = Field(default=20)  # a job "in progress" longer than this is retried
+    telegram_api_base: str = Field(default="https://api.telegram.org")
+    conversation_ttl_hours: int = Field(default=24)
 
     storage_root: Path = Field(default=Path("./data"))
     max_upload_mb: int = Field(default=20)

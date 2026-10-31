@@ -173,3 +173,18 @@ def test_concurrent_generation_gets_distinct_versions(auth_client, approved):
         results = list(pool.map(lambda _: auth_client.post(url), range(3)))
     assert all(r.status_code == 201 for r in results), [r.text for r in results]
     assert sorted(r.json()["version"] for r in results) == [1, 2, 3]
+
+
+def test_session_title_not_duplicated(auth_client, student):
+    from app.database import SessionLocal
+    from app.pdf.render import render_html
+    from app.services.programs import load_program
+    from app.services.settings import PdfTemplate
+
+    body = {**WORKOUT, "sessions": [{"title": "جلسه اول", "exercises": [{"name": "اسکوات"}]},
+                                    {"title": "پا", "exercises": [{"name": "پرس پا"}]}]}
+    p = create(auth_client, student, body)
+    with SessionLocal() as db:
+        html = render_html(load_program(db, p["id"]), "علی", PdfTemplate(), None, issued=None)
+    assert "جلسه اول: جلسه اول" not in html and "<h2>جلسه اول</h2>" in html
+    assert "<h2>جلسه دوم: پا</h2>" in html

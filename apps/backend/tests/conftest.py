@@ -14,6 +14,11 @@ import tempfile  # noqa: E402
 TEST_STORAGE = tempfile.mkdtemp(prefix="basharnia-test-storage-")
 os.environ["STORAGE_ROOT"] = TEST_STORAGE
 os.environ["MAX_UPLOAD_MB"] = "2"
+# Telegram (fake bot is injected; nothing reaches api.telegram.org)
+os.environ["TELEGRAM_BOT_TOKEN"] = "test-token"
+os.environ["TELEGRAM_ALLOWED_USER_ID"] = "111"
+os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-webhook-secret-0123456789"
+os.environ["FRONTEND_URL"] = "http://localhost:3000"
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402

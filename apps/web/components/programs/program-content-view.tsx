@@ -90,7 +90,8 @@ export function ProgramContentView({ program }: { program: Program }) {
         {program.sessions.map((s, i) => (
           <section key={s.id} className="overflow-hidden rounded-lg border">
             <h3 className="border-b bg-card px-4 py-2.5 font-semibold">
-              جلسه {SESSION_ORDINALS[i] ?? toPersianDigits(i + 1)}: {s.title}
+              {/* A title like «جلسه اول» (chosen in the bot) is shown as is, not «جلسه اول: جلسه اول» */}
+              {s.title.startsWith("جلسه") ? s.title : `جلسه ${SESSION_ORDINALS[i] ?? toPersianDigits(i + 1)}: ${s.title}`}
             </h3>
             {s.exercises.length ? (
               <ExerciseTable exercises={s.exercises} />
