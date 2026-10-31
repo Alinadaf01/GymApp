@@ -109,7 +109,7 @@ export function Dashboard() {
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link href="/programs">
+              <Link href="/programs/new">
                 <ClipboardList aria-hidden />
                 ثبت برنامه جدید
               </Link>
@@ -180,7 +180,9 @@ export function Dashboard() {
                 {summary.recent_programs.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 py-3">
                     <div className="min-w-0">
-                      <p className="truncate font-medium">{p.title}</p>
+                      <Link href={`/programs/${p.id}`} className="block truncate font-medium hover:underline">
+                        {p.title}
+                      </Link>
                       <p className="truncate text-xs text-muted-foreground">
                         {p.student_name} · {programTypeLabel[p.program_type]} ·{" "}
                         {formatJalaliDate(p.approved_at ?? p.created_at)}

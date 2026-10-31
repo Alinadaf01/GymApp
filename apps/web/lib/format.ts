@@ -40,3 +40,13 @@ export function formatNumber(value: number | string | null | undefined, fraction
   if (Number.isNaN(n)) return "—";
   return new Intl.NumberFormat("fa-IR", { maximumFractionDigits: fractionDigits }).format(n);
 }
+
+/** 60 -> «۱ دقیقه», 90 -> «۱ دقیقه و ۳۰ ثانیه», 45 -> «۴۵ ثانیه» (same meaning, friendlier). */
+export function formatSeconds(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const m = Math.floor(value / 60);
+  const s = value % 60;
+  if (m && s) return `${toPersianDigits(m)} دقیقه و ${toPersianDigits(s)} ثانیه`;
+  if (m) return `${toPersianDigits(m)} دقیقه`;
+  return `${toPersianDigits(s)} ثانیه`;
+}

@@ -7,8 +7,21 @@ _CHAR_MAP = str.maketrans({"ي": "ی", "ى": "ی", "ك": "ک", "ۀ": "ه", "ة":
 _SPACES = re.compile(r"\s+")
 
 
+_TO_FA = str.maketrans("0123456789", "۰۱۲۳۴۵۶۷۸۹")
+
+
 def to_ascii_digits(value: str) -> str:
     return value.translate(_DIGIT_MAP)
+
+
+def to_persian_digits(value: str) -> str:
+    return to_ascii_digits(value).translate(_TO_FA)
+
+
+def normalize_letters(value: str) -> str:
+    """Unify Arabic/Persian letters and whitespace only. Digits stay exactly as typed
+    (used for free text the coach sees again: titles, exercise names, ...)."""
+    return _SPACES.sub(" ", value.translate(_CHAR_MAP)).strip()
 
 
 def normalize_persian(value: str) -> str:

@@ -12,19 +12,20 @@ import {
   LineChart,
   Loader2,
   Pencil,
+  Plus,
   UserRound,
 } from "lucide-react";
 
 import { ComingSoon } from "@/components/layout/coming-soon";
+import { ProgramStatusBadge } from "@/components/programs/program-status-badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiFetch } from "@/lib/api";
 import { formatJalaliDate, formatNumber, toPersianDigits } from "@/lib/format";
-import { activityLabel, genderLabel, programStatusLabel, programTypeLabel, studentFieldLabel } from "@/lib/labels";
+import { activityLabel, genderLabel, programTypeLabel, studentFieldLabel } from "@/lib/labels";
 import type { Activity, ProgramSummary, Student } from "@/lib/types";
 import { ArchiveButton } from "./archive-button";
 import { StudentAvatar } from "./student-avatar";
@@ -170,13 +171,17 @@ function Overview({ student, activity }: { student: Student; activity: Activity[
   );
 }
 
-function Programs({ studentId }: { studentId: string }) {
+function Programs({ studentId, archived }: { studentId: string; archived: boolean }) {
   const [programs, setPrograms] = useState<ProgramSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    let cancelled = false;
     apiFetch<ProgramSummary[]>(`/api/students/${studentId}/programs`)
-      .then(setPrograms)
-      .catch((e: Error) => setError(e.message));
+      .then((p) => !cancelled && setPrograms(p))
+      .catch((e: Error) => !cancelled && setError(e.message));
+    return () => {
+      cancelled = true;
+    };
   }, [studentId]);
 
   if (error)
@@ -189,24 +194,35 @@ function Programs({ studentId }: { studentId: string }) {
   if (!programs) return <Skeleton className="h-24 w-full" />;
   return (
     <Card>
+      <CardHeader className="flex-row items-center justify-between">
+        <CardTitle>برنامه‌ها</CardTitle>
+        {!archived && (
+          <Button asChild size="sm">
+            <Link href={`/programs/new?student=${studentId}`}>
+              <Plus aria-hidden />
+              برنامه جدید
+            </Link>
+          </Button>
+        )}
+      </CardHeader>
       <CardContent>
         {programs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            هنوز برنامه‌ای برای این شاگرد ثبت نشده است. ثبت و مدیریت برنامه در فاز ۴ اضافه می‌شود.
-          </p>
+          <p className="py-6 text-center text-sm text-muted-foreground">هنوز برنامه‌ای برای این شاگرد ثبت نشده است.</p>
         ) : (
           <ul className="divide-y">
             {programs.map((p) => (
-              <li key={p.id} className="flex items-center justify-between gap-3 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{p.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {programTypeLabel[p.program_type]}
-                    {p.period_number ? ` · دوره ${toPersianDigits(p.period_number)}` : ""} ·{" "}
-                    {formatJalaliDate(p.approved_at ?? p.created_at)}
-                  </p>
-                </div>
-                <Badge variant={p.status === "approved" ? "success" : "muted"}>{programStatusLabel[p.status]}</Badge>
+              <li key={p.id}>
+                <Link href={`/programs/${p.id}`} className="flex items-center justify-between gap-3 py-3 hover:bg-muted/30">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{p.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {programTypeLabel[p.program_type]}
+                      {p.period_number ? ` · دوره ${toPersianDigits(p.period_number)}` : ""} ·{" "}
+                      {formatJalaliDate(p.approved_at ?? p.created_at)}
+                    </p>
+                  </div>
+                  <ProgramStatusBadge status={p.status} />
+                </Link>
               </li>
             ))}
           </ul>
@@ -288,7 +304,7 @@ export function StudentProfile() {
           <Overview student={student} activity={activity} />
         </TabsContent>
         <TabsContent value="programs">
-          <Programs studentId={student.id} />
+          <Programs studentId={student.id} archived={student.status === "archived"} />
         </TabsContent>
         <TabsContent value="photos">
           <ComingSoon phase={6} />

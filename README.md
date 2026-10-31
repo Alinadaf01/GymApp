@@ -52,6 +52,7 @@ npm ci && npm run dev                         # http://localhost:3000
 cd apps/web
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase2.smoke.mjs
 E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase3.smoke.mjs   # روی دیتابیس توسعه؛ رکورد تستی می‌سازد
+E2E_USERNAME=coach E2E_PASSWORD='...' node e2e/phase4.smoke.mjs   # برنامه‌ها و PDF
 ```
 
 ## حساب مربی
@@ -92,6 +93,7 @@ docker compose up -d --build
 sudo mkdir -p /data/basharnia && sudo chown -R 10001:10001 /data/basharnia && sudo chmod 750 /data/basharnia
 ```
 
+- PDF با Chromium (Playwright) داخل کانتینر API ساخته می‌شود. Chromium هنگام build image نصب می‌شود (`playwright install --with-deps chromium`) و نسخه‌اش با پکیج `playwright` در `requirements.txt` قفل است. در توسعه محلی یک‌بار `python -m playwright install chromium` را اجرا کنید. برای تست‌های PDF، ابزار `pdftotext` (بسته `poppler-utils`) لازم است.
 - جستجو به افزونه `pg_trgm` و مرتب‌سازی فارسی به collation `fa-x-icu` نیاز دارد. هر دو در image رسمی `postgres:16` موجودند و migration افزونه را فعال می‌کند.
 
 راهنمای کامل VPS، SSL، Vercel، بکاپ و Restore در فاز ۷ نوشته می‌شود.

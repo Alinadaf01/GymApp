@@ -112,3 +112,109 @@ export type ProgramSummary = {
   created_at: string;
   approved_at: string | null;
 };
+
+export type ExecutionType = "reps" | "time" | "distance" | "combined" | "free";
+
+export type Exercise = {
+  id: string;
+  name: string;
+  execution_type: ExecutionType;
+  sets: number | null;
+  reps: string | null;
+  weight_value: string | null;
+  weight_unit: string | null;
+  duration_seconds: number | null;
+  distance_value: string | null;
+  distance_unit: string | null;
+  rest_seconds: number | null;
+  notes: string | null;
+  raw_text: string | null;
+  sort_order: number;
+};
+
+export type WorkoutSession = {
+  id: string;
+  title: string;
+  notes: string | null;
+  sort_order: number;
+  exercises: Exercise[];
+};
+
+export type Meal = {
+  id: string;
+  title: string;
+  time_text: string | null;
+  content: string;
+  notes: string | null;
+  sort_order: number;
+};
+
+export type SupplementItem = {
+  id: string;
+  name: string;
+  amount_text: string | null;
+  timing_text: string | null;
+  notes: string | null;
+  sort_order: number;
+};
+
+export type PdfInfo = {
+  id: string;
+  program_id: string;
+  version: number;
+  created_at: string;
+  is_outdated: boolean;
+};
+
+export type StudentRef = { id: string; full_name: string };
+
+export type Program = {
+  id: string;
+  student: StudentRef;
+  title: string;
+  program_type: ProgramType;
+  period_number: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  status: ProgramStatus;
+  notes: string | null;
+  source_voice_record_id: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  sessions: WorkoutSession[];
+  meals: Meal[];
+  supplements: SupplementItem[];
+  latest_pdf: PdfInfo | null;
+};
+
+export type ProgramListItem = {
+  id: string;
+  student: StudentRef;
+  title: string;
+  program_type: ProgramType;
+  period_number: number | null;
+  status: ProgramStatus;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  pdf_count: number;
+};
+
+export type ProgramListResponse = {
+  items: ProgramListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+export type PdfTemplate = {
+  club_name: string;
+  coach_name: string;
+  phone: string;
+  primary_color: string;
+  footer_text: string;
+  has_logo: boolean;
+};

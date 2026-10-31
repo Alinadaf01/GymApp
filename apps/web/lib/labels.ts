@@ -1,4 +1,4 @@
-import type { Gender, ProgramStatus, ProgramType, StudentStatus } from "./types";
+import type { ExecutionType, Gender, ProgramStatus, ProgramType, StudentStatus } from "./types";
 
 export const studentStatusLabel: Record<StudentStatus, string> = {
   active: "فعال",
@@ -25,6 +25,27 @@ export const programStatusLabel: Record<ProgramStatus, string> = {
   archived: "بایگانی",
 };
 
+export const executionTypeLabel: Record<ExecutionType, string> = {
+  reps: "تکرار",
+  time: "زمان",
+  distance: "مسافت",
+  combined: "ترکیبی",
+  free: "آزاد",
+};
+
+export const WEIGHT_UNITS = [
+  { value: "kg", label: "کیلوگرم" },
+  { value: "lb", label: "پوند" },
+];
+export const DISTANCE_UNITS = [
+  { value: "m", label: "متر" },
+  { value: "km", label: "کیلومتر" },
+];
+const UNIT_LABELS: Record<string, string> = { kg: "کیلوگرم", lb: "پوند", m: "متر", km: "کیلومتر" };
+export function unitLabel(unit: string | null | undefined): string {
+  return unit ? (UNIT_LABELS[unit] ?? unit) : "";
+}
+
 const activityLabels: Record<string, string> = {
   "auth.admin_created": "حساب مدیر ساخته شد",
   "auth.password_changed": "رمز عبور تغییر کرد",
@@ -41,6 +62,10 @@ const activityLabels: Record<string, string> = {
   "program.approved": "برنامه تأیید شد",
   "program.duplicated": "برنامه کپی شد",
   "program.archived": "برنامه بایگانی شد",
+  "program.updated": "برنامه تأییدشده ویرایش شد",
+  "program.draft_deleted": "پیش‌نویس برنامه حذف شد",
+  "settings.pdf_template_updated": "تنظیمات سربرگ PDF تغییر کرد",
+  "settings.logo_updated": "لوگو تغییر کرد",
   "pdf.generated": "PDF تولید شد",
   "photo.uploaded": "عکس پیشرفت ثبت شد",
   "measurement.created": "اندازه‌های بدن ثبت شد",

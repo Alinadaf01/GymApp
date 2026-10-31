@@ -21,3 +21,13 @@ test("formatJalaliDate handles empty values", () => {
   assert.equal(formatJalaliDate(null), "—");
   assert.equal(formatJalaliDate("not-a-date"), "—");
 });
+
+import { formatSeconds } from "../lib/format.ts";
+
+test("formatSeconds keeps meaning", () => {
+  assert.equal(formatSeconds(60), "۱ دقیقه");
+  assert.equal(formatSeconds(90), "۱ دقیقه و ۳۰ ثانیه");
+  assert.equal(formatSeconds(45), "۴۵ ثانیه");
+  assert.equal(formatSeconds(0), "۰ ثانیه");
+  assert.equal(formatSeconds(null), "—");
+});

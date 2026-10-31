@@ -244,7 +244,7 @@ export function StudentForm({ student }: { student?: Student }) {
             <Input {...inputProps("last_name")} autoComplete="off" maxLength={100} required />
           </Field>
           <Field id="phone" label="شماره موبایل" error={errors.phone}>
-            <Input {...inputProps("phone")} inputMode="tel" dir="ltr" placeholder="09121234567" />
+            <Input {...inputProps("phone")} inputMode="tel" dir="ltr" />
           </Field>
           <Field id="gender" label="جنسیت">
             <NativeSelect id="gender" value={values.gender} onChange={set("gender")}>
@@ -257,10 +257,10 @@ export function StudentForm({ student }: { student?: Student }) {
             </NativeSelect>
           </Field>
           <Field id="birth_date" label="تاریخ تولد" error={errors.birth_date} hint="شمسی، مثل ۱۳۷۴/۰۲/۱۱">
-            <Input {...inputProps("birth_date")} inputMode="numeric" dir="ltr" placeholder="1374/02/11" />
+            <Input {...inputProps("birth_date")} inputMode="numeric" dir="ltr" />
           </Field>
           <Field id="start_date" label="تاریخ شروع همکاری" error={errors.start_date} hint="شمسی، مثل ۱۴۰۵/۰۸/۰۱">
-            <Input {...inputProps("start_date")} inputMode="numeric" dir="ltr" placeholder="1405/08/01" />
+            <Input {...inputProps("start_date")} inputMode="numeric" dir="ltr" />
           </Field>
           {isEdit && (
             <Field id="status" label="وضعیت">

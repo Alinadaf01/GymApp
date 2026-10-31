@@ -3,7 +3,8 @@ FROM python:3.12-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PIP_NO_CACHE_DIR=1
+    PIP_NO_CACHE_DIR=1 \
+    PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ffmpeg curl \
@@ -13,7 +14,10 @@ RUN useradd --create-home --uid 10001 app
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+# Chromium for PDF generation (same revision as the pinned playwright package)
+RUN pip install -r requirements.txt \
+    && python -m playwright install --with-deps chromium \
+    && chmod -R a+rX /ms-playwright
 
 COPY . .
 USER app
