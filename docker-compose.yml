@@ -1,0 +1,69 @@
+# Basharnia Coach CRM — VPS stack (backend side). The web panel is hosted on Vercel.
+# Only nginx publishes ports; db and api stay on the internal network.
+name: basharnia
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-basharnia}
+      POSTGRES_USER: ${POSTGRES_USER:-basharnia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  migrate:
+    build: ./apps/backend
+    env_file: .env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: "no"
+
+  api:
+    build: ./apps/backend
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ${STORAGE_HOST_PATH:-/data/basharnia}:/data/basharnia
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose: ["8000"]
+    networks: [internal]
+
+  # bot / worker are added in phase 5 (same image, different command)
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - certbot-webroot:/var/www/certbot:ro
+    environment:
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+      NGINX_MAX_BODY_MB: ${MAX_UPLOAD_MB:-20}
+    depends_on: [api]
+    networks: [internal]
+
+volumes:
+  pgdata:
+  certbot-webroot:
+
+networks:
+  internal:

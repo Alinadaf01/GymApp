@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+/*
+ * Brand tokens. Placeholder values — to be replaced with colors taken from
+ * the official Basharnia letterhead once the coach confirms them (spec §22).
+ */
+:root {
+  --background: #f7f8fa;
+  --surface: #ffffff;
+  --foreground: #1a1d23;
+  --muted: #5d6573;
+  --border: #e3e6eb;
+  --primary: #1f4e79;
+  --primary-foreground: #ffffff;
+  --success: #1e7a4c;
+  --danger: #b42318;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-vazirmatn), Tahoma, sans-serif;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+/* Keep Latin/number runs readable inside RTL text */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
