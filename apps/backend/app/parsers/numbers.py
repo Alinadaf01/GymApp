@@ -17,6 +17,9 @@ UNITS = {
 TEENS = {
     "ده": 10, "یازده": 11, "دوازده": 12, "سیزده": 13, "چهارده": 14, "چارده": 14, "پانزده": 15, "پونزده": 15,
     "شانزده": 16, "شونزده": 16, "هفده": 17, "هیفده": 17, "هجده": 18, "هیجده": 18, "نوزده": 19,
+    # Spoken forms with the final «د» dropped, as Whisper writes them («دوازه تکرار»)
+    "یازه": 11, "دوازه": 12, "سیزه": 13, "پونزه": 15, "پانزه": 15, "شونزه": 16,
+    "شانزه": 16, "هیفه": 17, "هیجه": 18, "نوزه": 19,
 }
 TENS = {"بیست": 20, "سی": 30, "چهل": 40, "پنجاه": 50, "شصت": 60, "هفتاد": 70, "هشتاد": 80, "نود": 90}
 HUNDREDS = {
@@ -38,7 +41,15 @@ GLUED_SUFFIXES = ("تایی", "تا", "ستی", "ست", "کیلویی", "کیل�
 _TOKEN = re.compile(r"\S+")
 
 
+# «سه ست» heard as one word. «سست» is never meant literally in a prescription.
+GLUED_SET_WORDS = {"سست": ["سه", "ست"], "سهست": ["سه", "ست"]}
+
+
 def _split_glued(token: str) -> list[str]:
+    if token in GLUED_SET_WORDS:
+        return list(GLUED_SET_WORDS[token])
+    if token.endswith("ست") and token != "دوست" and token[:-2] in WORDS and token[:-2] != "نه":
+        return [token[:-2], "ست"]  # «چهارست», «پنجست»
     if ZWNJ in token:
         head, _, tail = token.partition(ZWNJ)
         if head in WORDS and tail in GLUED_SUFFIXES:
@@ -127,6 +138,12 @@ def words_to_digits(text: str) -> str:
             tokens.extend(_split_glued(core))
         if punct:
             tokens.append(punct)
+    # «دوست» is «دو ست» only when a count follows («دوست 12 تکرار», «دوست دوازده تایی»)
+    for k in range(len(tokens) - 1, -1, -1):
+        if tokens[k] == "دوست" and k + 1 < len(tokens) and (
+            re.fullmatch(r"\d+(?:\.\d+)?", tokens[k + 1]) or tokens[k + 1] in WORDS
+        ):
+            tokens[k : k + 1] = ["دو", "ست"]
     i = 0
     while i < len(tokens):
         if tokens[i] == "نیم" and i + 1 < len(tokens) and tokens[i + 1] in UNIT_WORDS:

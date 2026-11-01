@@ -208,3 +208,49 @@ def test_supplements_amount_and_timing_as_said():
         ("منیزیم", None, None),  # nothing invented
     ]
     assert r.supplements[3].warnings == ["مقدار گفته نشده", "زمان مصرف گفته نشده"]
+
+
+# --- First real voice on the server (Whisper spellings of spoken Persian) ---
+
+REAL_DICT = ExerciseDictionary([
+    Entry("پرس سینه هالتر", ("پرس سینه با هالتر",)),
+    Entry("پرس سینه دمبل", ("پرس سینه با دمبل",)),
+    Entry("جلو بازو چکشی", ("جلوبازو چکشی",)),
+])
+
+
+def test_first_real_voice_transcript():
+    text = ("پرس سینه با حالتر، سست، دوازه تکرار، پرس سینه دنبل، چار ست، سیزه تکرار، "
+            "جلو بازو چکوشی، چار ست، چارده تکرار")
+    r = parse_workout(text, REAL_DICT)
+    got = [(e.name, e.matched, e.sets, e.reps, e.warnings) for e in r.exercises]
+    assert got == [
+        ("پرس سینه هالتر", True, 3, "12", []),
+        ("پرس سینه دمبل", True, 4, "13", []),
+        ("جلو بازو چکشی", True, 4, "14", []),
+    ]
+    assert r.warnings == [] and r.session_notes is None
+
+
+@pytest.mark.parametrize("text,expected", [
+    ("سست دوازه تکرار", "3 ست 12 تکرار"),
+    ("چهارست یازه تایی", "4 ست 11 تایی"),
+    ("دوست پونزه تکرار", "2 ست 15 تکرار"),
+    ("دوست 10 تایی", "2 ست 10 تایی"),
+    ("با دوستم رفتم", "با دوستم رفتم"),     # not a number
+    ("دوست داره", "دوست داره"),             # «دوست» without a count stays a word
+    ("نشست", "نشست"),
+])
+def test_spoken_number_forms(text, expected):
+    assert words_to_digits(text) == expected
+
+
+def test_connector_ba_ignored_in_dictionary_match():
+    r = parse_workout("پرس سینه با دمبل 4 ست 10 تایی", REAL_DICT)
+    assert r.exercises[0].name == "پرس سینه دمبل" and r.exercises[0].matched
+
+
+def test_spelling_fix_keeps_unknown_names_unguessed():
+    r = parse_workout("زیر بغل دنبل 3 ست 12 تایی", REAL_DICT)
+    ex = r.exercises[0]
+    assert ex.name == "زیر بغل دمبل" and not ex.matched  # spelling fixed, name not replaced

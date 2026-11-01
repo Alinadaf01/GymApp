@@ -12,7 +12,7 @@ from app.parsers.numbers import words_to_digits
 from app.services.text import to_persian_digits
 
 N = r"(\d+(?:\.\d+)?)"
-END = r"(?![\w؀-ۿ])"  # end of word (Persian-aware)
+END = r"(?![\w\u200c])"  # end of word (\w covers Persian letters; «،» must not count)
 
 RE_FAILURE = re.compile(r"تا\s+(ناتوانی|خستگی|شکست|واماندگی)")
 RE_PYRAMID = re.compile(r"(\d+(?:\s*[-–،,]?\s*\d+){2,})\s*(?:تایی|تکرار|تا)" + END)
@@ -221,11 +221,29 @@ def _split_and(segment: str) -> list[str]:
     return [p for p in RE_NEXT_EXERCISE.split(segment) if p.strip()]
 
 
+# Fixed misspellings Whisper produces for gym words (one meaning each, so this is a
+# spelling fix, not a guess). The raw transcript is still kept and shown to the coach.
+SPELLING = {
+    "حالتر": "هالتر", "هالطر": "هالتر", "حالطر": "هالتر",
+    "دنبل": "دمبل", "دامبل": "دمبل", "دمبول": "دمبل",
+    "چکوشی": "چکشی", "چکشى": "چکشی", "چکوش": "چکش",
+    "سیمکش": "سیم‌کش", "سیم کش": "سیم‌کش",
+    "اسکات": "اسکوات",
+}
+_RE_SPELLING = re.compile(
+    r"(?<![\w\u200c])(" + "|".join(sorted(map(re.escape, SPELLING), key=len, reverse=True)) + r")(?![\w\u200c])"
+)
+
+
+def fix_spelling(text: str) -> str:
+    return _RE_SPELLING.sub(lambda m: SPELLING[m.group(1)], text)
+
+
 SESSION_PREFIX = re.compile(r"^\s*جلسه\s+(\S+)\s*[:،]?\s*(.*)$")
 
 
 def parse_workout(text: str, dictionary: ExerciseDictionary = EMPTY, session_title: str | None = None) -> ParsedWorkout:
-    normalized = words_to_digits(text)
+    normalized = fix_spelling(words_to_digits(text))
     raw_segments = [s.strip() for s in SEPARATORS.split(normalized) if s and s.strip()]
     segments = [p.strip() for s in raw_segments for p in _split_and(s)]
 

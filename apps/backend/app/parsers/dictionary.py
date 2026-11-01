@@ -14,6 +14,11 @@ def key(text: str) -> str:
     return normalize_letters(text).replace("‌", "").replace(" ", "")
 
 
+def loose_key(text: str) -> str:
+    """Key without the connector «با»: «پرس سینه با هالتر» == «پرس سینه هالتر»."""
+    return key(" ".join(w for w in normalize_letters(text).split() if w != "با"))
+
+
 @dataclass(frozen=True)
 class Entry:
     canonical: str
@@ -31,9 +36,11 @@ class Match:
 class ExerciseDictionary:
     def __init__(self, entries: list[Entry]):
         self._by_key: dict[str, str] = {}
+        self._by_loose_key: dict[str, str] = {}
         for e in entries:
             for form in (e.canonical, *e.aliases):
                 self._by_key.setdefault(key(form), e.canonical)
+                self._by_loose_key.setdefault(loose_key(form), e.canonical)
         self._canonicals = sorted({e.canonical for e in entries})
 
     def __len__(self) -> int:
@@ -46,7 +53,8 @@ class ExerciseDictionary:
     def match_prefix(self, words: list[str]) -> Match | None:
         """Longest run of leading words that is exactly a dictionary name/alias."""
         for n in range(len(words), 0, -1):
-            canonical = self._by_key.get(key(" ".join(words[:n])))
+            phrase = " ".join(words[:n])
+            canonical = self._by_key.get(key(phrase)) or (self._by_loose_key.get(loose_key(phrase)) if loose_key(phrase) else None)
             if canonical:
                 return Match(name=canonical, matched=True, consumed_words=n)
         return None

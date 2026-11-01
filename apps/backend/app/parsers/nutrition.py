@@ -19,7 +19,7 @@ MEALS = [
     ("عصرانه", "عصرانه"),
     ("شام", "شام"),
 ]
-RE_MEAL = re.compile(r"(?<![\w؀-ۿ])(" + "|".join(re.escape(k) for k, _ in MEALS) + r")(?![\w؀-ۿ])")
+RE_MEAL = re.compile(r"(?<![\w\u200c])(" + "|".join(re.escape(k) for k, _ in MEALS) + r")(?![\w\u200c])")
 _H = r"(\d{1,2})(?:[:٫](\d{2})|\.(5))?"  # 8, 8:30, 10.5 («ده و نیم»)
 _PART = r"(صبح|ظهر|بعدازظهر|بعد از ظهر|عصر|شب)"
 RE_TIME_PART = re.compile(r"(?:ساعت\s*)?" + _H + r"\s*" + _PART)
