@@ -1,0 +1,144 @@
+"""Persian number words -> ASCII digits, inside free text.
+
+    «چهار ست پونزده تایی» -> «4 ست 15 تایی»
+    «بیست و پنج کیلو»     -> «25 کیلو»
+    «یک و نیم دقیقه»       -> «1.5 دقیقه»
+"""
+import re
+
+from app.services.text import normalize_letters, to_ascii_digits
+
+ZWNJ = "‌"
+
+UNITS = {
+    "صفر": 0, "یک": 1, "یه": 1, "دو": 2, "سه": 3, "چهار": 4, "چار": 4, "پنج": 5, "شش": 6, "شیش": 6,
+    "هفت": 7, "هشت": 8, "نه": 9,
+}
+TEENS = {
+    "ده": 10, "یازده": 11, "دوازده": 12, "سیزده": 13, "چهارده": 14, "چارده": 14, "پانزده": 15, "پونزده": 15,
+    "شانزده": 16, "شونزده": 16, "هفده": 17, "هیفده": 17, "هجده": 18, "هیجده": 18, "نوزده": 19,
+}
+TENS = {"بیست": 20, "سی": 30, "چهل": 40, "پنجاه": 50, "شصت": 60, "هفتاد": 70, "هشتاد": 80, "نود": 90}
+HUNDREDS = {
+    "صد": 100, "یکصد": 100, "دویست": 200, "سیصد": 300, "چهارصد": 400, "پانصد": 500, "پونصد": 500,
+    "ششصد": 600, "هفتصد": 700, "هشتصد": 800, "نهصد": 900,
+}
+WORDS = {**UNITS, **TEENS, **TENS, **HUNDREDS}
+
+# Words that commonly follow a number in coaching speech
+UNIT_WORDS = {
+    "ست", "ستی", "تا", "تایی", "تکرار", "کیلو", "کیلویی", "کیلوگرم", "کیلوگرمی", "پوند", "ثانیه", "ثانیه‌ای",
+    "دقیقه", "دقیقه‌ای", "متر", "کیلومتر", "عدد", "قرص", "کپسول", "اسکوپ", "پیمانه", "قاشق", "گرم", "واحد",
+    "بار", "لیوان", "کف", "برش", "تکه", "ساعت", "نیم",
+}
+DAY_PARTS = {"صبح", "ظهر", "عصر", "شب", "بعدازظهر"}
+# Suffixes glued to a number word with ZWNJ: «پانزده‌تایی», «دوازده‌تا»
+GLUED_SUFFIXES = ("تایی", "تا", "ستی", "ست", "کیلویی", "کیلو", "ای")
+
+_TOKEN = re.compile(r"\S+")
+
+
+def _split_glued(token: str) -> list[str]:
+    if ZWNJ in token:
+        head, _, tail = token.partition(ZWNJ)
+        if head in WORDS and tail in GLUED_SUFFIXES:
+            return [head, tail]
+    for suffix in ("تایی", "تا"):
+        # «پونزدهتایی» (no separator) — only when the prefix is a number word
+        if token.endswith(suffix) and token[: -len(suffix)] in WORDS:
+            return [token[: -len(suffix)], suffix]
+    if re.fullmatch(r"\d+(?:\.\d+)?(تایی|تا|کیلویی|کیلو|ستی)", token):
+        m = re.fullmatch(r"(\d+(?:\.\d+)?)(\D+)", token)
+        return [m.group(1), m.group(2)]
+    return [token]
+
+
+def _is_number_word(tokens: list[str], i: int) -> bool:
+    t = tokens[i]
+    if t not in WORDS:
+        return False
+    if t == "نه":  # «نه» is also "no": a number only in a clear numeric context
+        nxt = tokens[i + 1] if i + 1 < len(tokens) else ""
+        prev = tokens[i - 1] if i > 0 else ""
+        return nxt in UNIT_WORDS or nxt in DAY_PARTS or prev == "ساعت"
+    return True
+
+
+def _read_number(tokens: list[str], i: int) -> tuple[float, int] | None:
+    """Read a compound number starting at i. Returns (value, next_index)."""
+    if tokens[i] == "هزار":  # bare «هزار» = 1000 («هزار واحد»)
+        rest = _read_number(tokens, i + 2) if i + 2 < len(tokens) and tokens[i + 1] == "و" else None
+        if rest:
+            return 1000 + rest[0], rest[1]
+        return 1000.0, i + 1
+    if not _is_number_word(tokens, i) and not re.fullmatch(r"\d+(?:\.\d+)?", tokens[i]):
+        return None
+    total = 0.0
+    current = 0.0
+    j = i
+    last_was_number = False
+    while j < len(tokens):
+        t = tokens[j]
+        if re.fullmatch(r"\d+(?:\.\d+)?", t) and not last_was_number:
+            current += float(t)
+            last_was_number = True
+            j += 1
+        elif t in WORDS and _is_number_word(tokens, j) and not last_was_number:
+            current += WORDS[t]
+            last_was_number = True
+            j += 1
+        elif t == "هزار" and last_was_number:
+            total += (current or 1) * 1000
+            current = 0
+            j += 1
+        elif t == "و" and last_was_number and j + 1 < len(tokens):
+            nxt = tokens[j + 1]
+            if nxt == "نیم":
+                current += 0.5
+                j += 2
+            elif (nxt in WORDS and _is_number_word(tokens, j + 1)) or re.fullmatch(r"\d+", nxt):
+                last_was_number = False
+                j += 1
+            else:
+                break
+        else:
+            break
+    if j == i:
+        return None
+    return total + current, j
+
+
+def _fmt(value: float) -> str:
+    return str(int(value)) if value == int(value) else str(value)
+
+
+def words_to_digits(text: str) -> str:
+    """Normalize letters/digits and replace Persian number words with ASCII digits."""
+    text = to_ascii_digits(normalize_letters(text))
+    text = text.replace("٫", ".")
+    text = re.sub(r"(?<=\d)[,،](?=\d{3}\b)", "", text)  # 1,000 -> 1000
+    out: list[str] = []
+    tokens: list[str] = []
+    for tok in _TOKEN.findall(text):
+        # Keep punctuation as separate tokens so «تایی،» still matches
+        m = re.fullmatch(r"(.*?)([،,.;:!?؛]*)", tok)
+        core, punct = m.group(1), m.group(2)
+        if core:
+            tokens.extend(_split_glued(core))
+        if punct:
+            tokens.append(punct)
+    i = 0
+    while i < len(tokens):
+        if tokens[i] == "نیم" and i + 1 < len(tokens) and tokens[i + 1] in UNIT_WORDS:
+            out.append("0.5")
+            i += 1
+            continue
+        read = _read_number(tokens, i)
+        if read:
+            value, i = read
+            out.append(_fmt(value))
+        else:
+            out.append(tokens[i])
+            i += 1
+    joined = " ".join(out)
+    return re.sub(r"\s+([،,.;:!?؛])", r"\1", joined)

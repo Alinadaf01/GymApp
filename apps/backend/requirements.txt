@@ -1,0 +1,19 @@
+# Runtime dependencies — pinned stable versions
+fastapi==0.162.0
+uvicorn[standard]==0.54.0
+SQLAlchemy==2.1.6
+alembic==1.20.1
+psycopg[binary]==3.3.6
+pydantic==2.14.2
+pydantic-settings==2.16.2
+argon2-cffi==25.1.0
+jdatetime==6.1.1
+tzdata==2026.6
+pillow==13.0.0
+python-multipart==0.0.32
+Jinja2==3.1.6
+playwright==1.63.0
+faster-whisper==1.2.1
+# faster-whisper 1.2.1 passes an argument removed in av 19
+av==18.1.0
+httpx==0.28.1

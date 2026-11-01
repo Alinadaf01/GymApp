@@ -1,0 +1,119 @@
+# Basharnia Coach CRM — complete stack on one small VPS, one domain:
+#   https://DOMAIN/       -> web (Next.js panel)
+#   https://DOMAIN/api/*  -> api (FastAPI)      Telegram webhook: https://DOMAIN/api/telegram/webhook
+# Only nginx publishes ports; db, api and web stay on the internal network.
+name: basharnia
+
+# Rotate container logs so they cannot fill the disk
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    logging: *logging
+    # No published port: reachable only on the internal Docker network
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-basharnia}
+      POSTGRES_USER: ${POSTGRES_USER:-basharnia}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks: [internal]
+
+  migrate:
+    build: ./apps/backend
+    env_file: .env
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [internal]
+    restart: "no"
+
+  api:
+    build: ./apps/backend
+    restart: unless-stopped
+    logging: *logging
+    env_file: .env
+    volumes:
+      - ${STORAGE_HOST_PATH:-/data/basharnia}:/data/basharnia
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    expose: ["8000"]
+    networks: [internal]
+
+  # Voice pipeline: Telegram download -> FFmpeg -> local Faster-Whisper -> Persian parser.
+  # Same image as the API; jobs live in PostgreSQL so restarts never lose work.
+  # The Telegram bot itself is served by the API (webhook at /api/telegram/webhook).
+  worker:
+    build: ./apps/backend
+    restart: unless-stopped
+    logging: *logging
+    env_file: .env
+    environment:
+      WHISPER_MODEL_DIR: /models
+    command: ["python", "-m", "app.worker"]
+    volumes:
+      - ${STORAGE_HOST_PATH:-/data/basharnia}:/data/basharnia
+      - whisper-models:/models
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks: [internal]
+    # Whisper "small" int8 peaks around 1.2 GB; keep it from starving the API/DB
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    logging: *logging
+    expose: ["3000"]
+    depends_on: [api]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 384m
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      # ACME webroot on the host: certbot (installed on the host) renews certificates here
+      - /var/www/certbot:/var/www/certbot:ro
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
+      NGINX_MAX_BODY_MB: ${MAX_UPLOAD_MB:-20}
+    depends_on: [api, web]
+    networks: [internal]
+
+volumes:
+  pgdata:
+  whisper-models:
+
+networks:
+  internal:

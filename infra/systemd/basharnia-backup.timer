@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily Basharnia backup
+
+[Timer]
+# 00:30 UTC = 04:00 Tehran
+OnCalendar=*-*-* 00:30:00 UTC
+RandomizedDelaySec=10m
+Persistent=true
+
+[Install]
+WantedBy=timers.target
