@@ -272,3 +272,28 @@ def test_spelling_fix_keeps_unknown_names_unguessed():
     r = parse_workout("زیر بغل دنبل 3 ست 12 تایی", REAL_DICT)
     ex = r.exercises[0]
     assert ex.name == "زیر بغل دمبل" and not ex.matched  # spelling fixed, name not replaced
+
+
+def test_third_real_voice_transcript():
+    text = ("بالا سینه هالتر، چار ست، دوازده تکرار. پرس سینه دمبل، پین ست، چارده تکرار. "
+            "جلو بازو دمبل، چارده ست، سیزه تکرار.")
+    d = ExerciseDictionary([
+        Entry("پرس بالا سینه هالتر", ("بالا سینه هالتر",)),
+        Entry("پرس سینه دمبل"),
+        Entry("جلو بازو دمبل"),
+    ])
+    r = parse_workout(text, d)
+    got = [(e.name, e.matched, e.sets, e.reps) for e in r.exercises]
+    assert got == [
+        ("پرس بالا سینه هالتر", True, 4, "12"),
+        ("پرس سینه دمبل", True, 5, "14"),
+        ("جلو بازو دمبل", True, 14, "13"),
+    ]
+    assert r.exercises[0].warnings == [] and r.exercises[1].warnings == []
+    # 14 sets is kept as said (no guessing) but flagged for review
+    assert r.exercises[2].warnings == ["تعداد ست (۱۴) غیرعادی است؛ بررسی کنید"]
+
+
+def test_misheard_number_only_before_a_unit():
+    assert words_to_digits("پین ست") == "5 ست"
+    assert words_to_digits("پین مو") == "پین مو"

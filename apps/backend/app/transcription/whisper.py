@@ -74,6 +74,8 @@ PROMPT_STYLE = (
 )
 
 
-def vocabulary_prompt(exercise_names: list[str], limit: int = 40) -> str:
+def vocabulary_prompt(exercise_names: list[str], limit: int = 20) -> str:
+    # Whisper keeps only the LAST ~224 prompt tokens, so the style sample goes last
+    # and the name list stays short (Persian takes several tokens per word).
     names = "، ".join(exercise_names[:limit])
-    return f"{PROMPT_STYLE} {names}." if names else PROMPT_STYLE
+    return f"{names}. {PROMPT_STYLE}" if names else PROMPT_STYLE

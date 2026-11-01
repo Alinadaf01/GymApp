@@ -30,6 +30,7 @@ RE_NUMBER = re.compile(r"(?<![\w.])\d+(?:\.\d+)?(?![\w.])")
 
 SEPARATORS = re.compile(r"[،,.;؛\n]+|\s(?:و\s+)?(?:بعدش|بعد\s+از\s+اون|بعد|سپس|حرکت\s+بعدی|بعدی)\s")
 GENERAL_REST = re.compile(r"(بین\s*ست|همه|کل|تمام|هر\s*ست)")
+MAX_USUAL_SETS = 10
 FILLERS = {"با", "حرکت", "بزن", "بزنه", "انجام", "بده", "بشه", "رو", "را", "هم", "اول", "دوم", "سوم", "و", "بعد"}
 EQUIPMENT_AFTER_WITH = {"دمبل", "هالتر", "دستگاه", "کش", "سیم‌کش", "میله"}
 NOTE_HINTS = ("سوپرست", "سوپر ست", "دراپ", "کنترل", "آهسته", "آروم", "تمپو", "مکث", "فول", "نیمه", "فشار")
@@ -284,6 +285,10 @@ def parse_workout(text: str, dictionary: ExerciseDictionary = EMPTY, session_tit
             warnings.append(f"مقادیر بدون نام حرکت (ثبت نشد): «{_fa(seg)}»")
         session_notes.append(_fa(seg))
 
+    for ex in exercises:
+        if ex.sets is not None and ex.sets > MAX_USUAL_SETS:
+            # e.g. «چهار ست» heard as «چارده ست»: keep what was said, but flag it
+            ex.warnings.append(f"تعداد ست ({to_persian_digits(str(ex.sets))}) غیرعادی است؛ بررسی کنید")
     if not exercises:
         warnings.append("هیچ حرکتی تشخیص داده نشد؛ متن را بررسی و اصلاح کنید")
     notes = "، ".join(session_notes) if session_notes else None

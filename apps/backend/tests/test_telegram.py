@@ -119,7 +119,7 @@ def test_full_workout_flow(client, bot, transcriber, student):
     assert v.transcript_raw == WORKOUT_TEXT
     assert v.audio_path is None and v.deleted_at is not None  # temp audio removed
     prompt = transcriber.prompts[0]  # vocabulary hint is on by default
-    assert prompt.startswith("پرس سینه هالتر، سه ست، دوازده تکرار.") and "پرس بالا سینه دمبل" in prompt
+    assert prompt.endswith("پلانک، سه ست، یک دقیقه.") and "پرس بالا سینه دمبل" in prompt
     review = bot.last
     assert "پرس بالا سینه دمبل" in review["text"] and "۴ ست" in review["text"]
     assert "تعداد تکرار گفته نشده" in review["text"]  # squat reps not guessed

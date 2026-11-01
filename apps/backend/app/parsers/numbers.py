@@ -50,8 +50,16 @@ _RE_TEKRAR_VARIANT = re.compile(r"(?<!\w)(?:ایکرار|اکرار|تیکرار
 _RE_NUM_COMMA_UNIT = re.compile(r"(\d+(?:\.\d+)?)\s*[،,]\s*(ست|ستی|تکرار|تایی)(?!\w)")
 
 
+# Mis-heard numbers, accepted ONLY right before ست/تکرار/تایی («پین ست» = «پنج ست»)
+MISHEARD_BEFORE_UNIT = {"پین": "پنج", "پنش": "پنج", "پن": "پنج", "هف": "هفت", "هش": "هشت", "شیس": "شیش"}
+
+
 def _number_before_unit(token: str) -> str | None:
     """A clipped number word right before «ست/تکرار/تایی» («چارد» -> «چارده»)."""
+    if token in MISHEARD_BEFORE_UNIT:
+        return MISHEARD_BEFORE_UNIT[token]
+    if len(token) < 3:
+        return None
     for cand in (token + "ه", token + "ده", token[:-1] + "ه" if token.endswith("د") else ""):
         if cand in WORDS:
             return cand
@@ -164,7 +172,7 @@ def words_to_digits(text: str) -> str:
         ):
             tokens[k : k + 1] = ["دو", "ست"]
     for k in range(len(tokens) - 1):
-        if tokens[k + 1] in COUNT_UNITS and tokens[k] not in WORDS and len(tokens[k]) >= 3:
+        if tokens[k + 1] in COUNT_UNITS and tokens[k] not in WORDS:
             fixed = _number_before_unit(tokens[k])
             if fixed:
                 tokens[k] = fixed
