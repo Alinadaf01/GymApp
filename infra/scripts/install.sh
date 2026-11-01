@@ -10,6 +10,8 @@
 # Telegram webhook. Safe to run again: finished steps are skipped.
 #
 #   INSTALL_ENV_ONLY=1 ...   only write .env (used by tests)
+#   Unattended: set DOMAIN, TELEGRAM_BOT_TOKEN, TELEGRAM_ALLOWED_USER_ID, ADMIN_USER,
+#   LE_EMAIL and PANEL_USER in the environment; nothing is asked then.
 set -euo pipefail
 
 APP_DIR=$(cd "$(dirname "$0")/../.." && pwd)
@@ -143,8 +145,17 @@ code=$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/health/ready"
 
 say "7/8 Coach account"
 if docker compose exec -T db psql -U basharnia -d basharnia -Atc "SELECT count(*) FROM users" | grep -qx 0; then
-  echo "Choose the coach's username and password (at least 10 characters):"
-  docker compose run --rm api python -m app.cli create-admin
+  if [[ -n ${PANEL_USER:-} ]]; then
+    # Unattended: random temporary password, readable only by root. Change it after the first login.
+    pw_file=/root/basharnia-panel-password.txt
+    (umask 077; printf 'username: %s\npassword: %s\n' "$PANEL_USER" "$(rand 16)" > "$pw_file")
+    ADMIN_USERNAME=$PANEL_USER INITIAL_ADMIN_PASSWORD=$(awk '/^password:/{print $2}' "$pw_file") \
+      docker compose run --rm -T -e ADMIN_USERNAME -e INITIAL_ADMIN_PASSWORD api python -m app.cli create-admin
+    ok "account '$PANEL_USER' created; its temporary password is in $pw_file (root only)"
+  else
+    echo "Choose the coach's username and password (at least 10 characters):"
+    docker compose run --rm api python -m app.cli create-admin
+  fi
 else
   ok "account already exists (forgot the password? docker compose run --rm api python -m app.cli reset-password)"
 fi
