@@ -66,6 +66,14 @@ def set_transcriber(t: Transcriber | None) -> None:
     _default = t
 
 
-def vocabulary_prompt(exercise_names: list[str], limit: int = 60) -> str:
-    words = exercise_names[:limit] + ["ست", "تایی", "تکرار", "کیلو", "استراحت", "ثانیه", "دقیقه", "سوپرست"]
-    return "، ".join(words) + "."
+# A short sample in the coach's own style: Whisper copies the spelling and
+# punctuation of its prompt much better than it follows a bare word list.
+PROMPT_STYLE = (
+    "پرس سینه هالتر، سه ست، دوازده تکرار. جلو بازو دمبل چکشی، چهار ست، چهارده تکرار. "
+    "اسکوات، پنج ست، پانزده تایی، استراحت نود ثانیه. پلانک، سه ست، یک دقیقه."
+)
+
+
+def vocabulary_prompt(exercise_names: list[str], limit: int = 40) -> str:
+    names = "، ".join(exercise_names[:limit])
+    return f"{PROMPT_STYLE} {names}." if names else PROMPT_STYLE

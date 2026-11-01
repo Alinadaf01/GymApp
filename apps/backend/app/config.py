@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     # Exercise-name hint for Whisper. Off by default: in tests it improved names but
     # also made Whisper output exercises that were never said. Enable only after
     # evaluating with the coach's real voices (spec §8.4).
-    whisper_vocab_hint: bool = Field(default=False)
+    whisper_vocab_hint: bool = Field(default=True)
     # Raw audio is deleted right after processing by default (0 = do not retain)
     audio_retain_hours: int = Field(default=0)
     worker_poll_seconds: float = Field(default=2.0)

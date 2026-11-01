@@ -30,7 +30,10 @@ services:
       retries: 5
     networks: [internal]
 
+  # api, worker and migrate share ONE image, so rebuilding any of them updates
+  # all three (a separate migrate image once kept running old migrations).
   migrate:
+    image: basharnia-backend:latest
     build: ./apps/backend
     env_file: .env
     command: ["alembic", "upgrade", "head"]
@@ -41,6 +44,7 @@ services:
     restart: "no"
 
   api:
+    image: basharnia-backend:latest
     build: ./apps/backend
     restart: unless-stopped
     logging: *logging
@@ -59,6 +63,7 @@ services:
   # Same image as the API; jobs live in PostgreSQL so restarts never lose work.
   # The Telegram bot itself is served by the API (webhook at /api/telegram/webhook).
   worker:
+    image: basharnia-backend:latest
     build: ./apps/backend
     restart: unless-stopped
     logging: *logging

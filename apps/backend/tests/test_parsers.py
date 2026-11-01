@@ -232,7 +232,25 @@ def test_first_real_voice_transcript():
     assert r.warnings == [] and r.session_notes is None
 
 
+def test_second_real_voice_transcript():
+    # Whisper split the numbers across words and put commas inside «چار، ست»
+    text = ("پرس سینه حالتر، سست، دوزت ایکرار، پرس سینه دنبل، چار، ست، سیزهت ایکرار، "
+            "جلو بازو چکوشی، چار، ست، چاردت ایکرار.")
+    r = parse_workout(text, REAL_DICT)
+    got = [(e.name, e.matched, e.sets, e.reps, e.warnings) for e in r.exercises]
+    assert got == [
+        ("پرس سینه هالتر", True, 3, "12", []),
+        ("پرس سینه دمبل", True, 4, "13", []),
+        ("جلو بازو چکشی", True, 4, "14", []),
+    ]
+    assert r.warnings == [] and r.session_notes is None
+
+
 @pytest.mark.parametrize("text,expected", [
+    ("چارد تکرار", "14 تکرار"),
+    ("اسکوات تا ناتوانی", "اسکوات تا ناتوانی"),
+    ("لت سیم‌کش تا خستگی", "لت سیم‌کش تا خستگی"),
+    ("سه، تکرار", "3 تکرار"),
     ("سست دوازه تکرار", "3 ست 12 تکرار"),
     ("چهارست یازه تایی", "4 ست 11 تایی"),
     ("دوست پونزه تکرار", "2 ست 15 تکرار"),

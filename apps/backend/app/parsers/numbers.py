@@ -19,7 +19,7 @@ TEENS = {
     "شانزده": 16, "شونزده": 16, "هفده": 17, "هیفده": 17, "هجده": 18, "هیجده": 18, "نوزده": 19,
     # Spoken forms with the final «د» dropped, as Whisper writes them («دوازه تکرار»)
     "یازه": 11, "دوازه": 12, "سیزه": 13, "پونزه": 15, "پانزه": 15, "شونزه": 16,
-    "شانزه": 16, "هیفه": 17, "هیجه": 18, "نوزه": 19,
+    "شانزه": 16, "هیفه": 17, "هیجه": 18, "نوزه": 19, "دوزده": 12, "دوزه": 12,
 }
 TENS = {"بیست": 20, "سی": 30, "چهل": 40, "پنجاه": 50, "شصت": 60, "هفتاد": 70, "هشتاد": 80, "نود": 90}
 HUNDREDS = {
@@ -39,6 +39,23 @@ DAY_PARTS = {"صبح", "ظهر", "عصر", "شب", "بعدازظهر"}
 GLUED_SUFFIXES = ("تایی", "تا", "ستی", "ست", "کیلویی", "کیلو", "ای")
 
 _TOKEN = re.compile(r"\S+")
+
+COUNT_UNITS = {"ست", "ستی", "تکرار", "تایی", "تا", "تکراری"}
+
+# Whisper often moves the «د/ت» of the number onto the next word:
+# «دوازده تکرار» -> «دوزت ایکرار», «چهارده تکرار» -> «چاردت ایکرار».
+_RE_SPLIT_TEKRAR = re.compile(r"(\S+?)ت\s+(?:ای|ا|ی)کرار(?!\w)")
+_RE_TEKRAR_VARIANT = re.compile(r"(?<!\w)(?:ایکرار|اکرار|تیکرار|تکرا|تکرارو)(?!\w)")
+# «چار، ست» — a pause after the number became a comma
+_RE_NUM_COMMA_UNIT = re.compile(r"(\d+(?:\.\d+)?)\s*[،,]\s*(ست|ستی|تکرار|تایی)(?!\w)")
+
+
+def _number_before_unit(token: str) -> str | None:
+    """A clipped number word right before «ست/تکرار/تایی» («چارد» -> «چارده»)."""
+    for cand in (token + "ه", token + "ده", token[:-1] + "ه" if token.endswith("د") else ""):
+        if cand in WORDS:
+            return cand
+    return None
 
 
 # «سه ست» heard as one word. «سست» is never meant literally in a prescription.
@@ -127,6 +144,8 @@ def words_to_digits(text: str) -> str:
     """Normalize letters/digits and replace Persian number words with ASCII digits."""
     text = to_ascii_digits(normalize_letters(text))
     text = text.replace("٫", ".")
+    text = _RE_SPLIT_TEKRAR.sub(r"\1 تکرار", text)
+    text = _RE_TEKRAR_VARIANT.sub("تکرار", text)
     text = re.sub(r"(?<=\d)[,،](?=\d{3}\b)", "", text)  # 1,000 -> 1000
     out: list[str] = []
     tokens: list[str] = []
@@ -144,6 +163,11 @@ def words_to_digits(text: str) -> str:
             re.fullmatch(r"\d+(?:\.\d+)?", tokens[k + 1]) or tokens[k + 1] in WORDS
         ):
             tokens[k : k + 1] = ["دو", "ست"]
+    for k in range(len(tokens) - 1):
+        if tokens[k + 1] in COUNT_UNITS and tokens[k] not in WORDS and len(tokens[k]) >= 3:
+            fixed = _number_before_unit(tokens[k])
+            if fixed:
+                tokens[k] = fixed
     i = 0
     while i < len(tokens):
         if tokens[i] == "نیم" and i + 1 < len(tokens) and tokens[i + 1] in UNIT_WORDS:
@@ -157,5 +181,5 @@ def words_to_digits(text: str) -> str:
         else:
             out.append(tokens[i])
             i += 1
-    joined = " ".join(out)
-    return re.sub(r"\s+([،,.;:!?؛])", r"\1", joined)
+    joined = re.sub(r"\s+([،,.;:!?؛])", r"\1", " ".join(out))
+    return _RE_NUM_COMMA_UNIT.sub(r"\1 \2", joined)
