@@ -8,13 +8,15 @@ import assert from "node:assert/strict";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
+// Self-signed test certificates (e.g. infra/tests/test-compose-stack.sh)
+const IGNORE_TLS = !!process.env.E2E_IGNORE_HTTPS_ERRORS;
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const API = process.env.E2E_API_URL ?? "http://localhost:8000";
 const WIDTH = 390;
 
 const browser = await chromium.launch();
 try {
-  const page = await (await browser.newContext({ viewport: { width: WIDTH, height: 844 } })).newPage();
+  const page = await (await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: WIDTH, height: 844 } })).newPage();
   // Also: no Content-Security-Policy violations or console errors on any page
   const consoleProblems = [];
   page.on("console", (m) => {

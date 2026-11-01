@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
+// Self-signed test certificates (e.g. infra/tests/test-compose-stack.sh)
+const IGNORE_TLS = !!process.env.E2E_IGNORE_HTTPS_ERRORS;
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const API = process.env.E2E_API_URL ?? "http://localhost:8000";
@@ -45,7 +47,7 @@ async function imagesLoaded(page, selector) {
 
 const browser = await chromium.launch();
 try {
-  const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+  const page = await (await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: 1280, height: 900 } })).newPage();
   await login(page);
   const student = await page.evaluate(async ([api, last]) => {
     const r = await fetch(`${api}/api/students`, {
@@ -180,7 +182,7 @@ try {
   step("history lists photo and measurement events with view and date");
 
   // --- mobile ---
-  const m = await (await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true })).newPage();
+  const m = await (await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: 390, height: 844 }, isMobile: true })).newPage();
   await login(m);
   for (const tab of ["photos", "trends"]) {
     await m.goto(`${url}?tab=${tab}`);

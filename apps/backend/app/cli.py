@@ -118,6 +118,63 @@ def delete_webhook() -> None:
     print("Webhook deleted.")
 
 
+def export_voice_eval(since: str | None = None) -> None:
+    """Export voices for accuracy evaluation (spec §8.4) as JSON on stdout:
+    Whisper's raw text, the coach's text correction, what the parser produced and
+    the program as finally saved (after any edits in the panel). The coach's
+    corrections and final values are the ground truth for tuning the parser.
+
+        docker compose run --rm -T api python -m app.cli export-voice-eval > voice-eval.json
+    """
+    import json
+    from datetime import date
+
+    from app.models import Program, Student, VoiceRecord
+    from app.services.programs import load_program
+
+    with SessionLocal() as db:
+        stmt = select(VoiceRecord).order_by(VoiceRecord.created_at)
+        if since:
+            stmt = stmt.where(VoiceRecord.created_at >= date.fromisoformat(since))
+        items = []
+        for v in db.scalars(stmt):
+            program_doc = None
+            if v.program_id and db.get(Program, v.program_id):
+                p = load_program(db, v.program_id)
+                program_doc = {
+                    "status": p.status.value,
+                    "sessions": [
+                        {"title": s.title, "notes": s.notes, "exercises": [
+                            {k: (str(getattr(e, k)) if getattr(e, k) is not None else None)
+                             for k in ("name", "sets", "reps", "weight_value", "weight_unit", "duration_seconds",
+                                       "distance_value", "distance_unit", "rest_seconds", "notes", "raw_text")}
+                            for e in s.exercises]}
+                        for s in p.sessions
+                    ],
+                    "meals": [{"title": m.title, "time_text": m.time_text, "content": m.content} for m in p.meals],
+                    "supplements": [{"name": x.name, "amount_text": x.amount_text, "timing_text": x.timing_text}
+                                    for x in p.supplements],
+                }
+            student = db.get(Student, v.student_id)
+            items.append({
+                "id": str(v.id),
+                "created_at": v.created_at.isoformat(),
+                "student": f"{student.first_name} {student.last_name}" if student else None,
+                "program_type": v.program_type,
+                "session_title": v.session_title,
+                "duration_seconds": v.duration_seconds,
+                "status": v.processing_status.value,
+                "transcript_raw": v.transcript_raw,
+                "corrected_text": v.corrected_text,
+                "parsed": v.parsed_payload,
+                "final_program": program_doc,
+                "audio_file": v.audio_path,  # present only while AUDIO_RETAIN_HOURS > 0
+            })
+        json.dump({"exported_at": date.today().isoformat(), "count": len(items), "voices": items},
+                  sys.stdout, ensure_ascii=False, indent=1)
+        sys.stdout.write("\n")
+
+
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m app.cli")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -127,7 +184,11 @@ def main(argv: list[str] | None = None) -> None:
     sub.add_parser("set-webhook", help="ثبت Webhook تلگرام")
     sub.add_parser("webhook-info", help="وضعیت Webhook تلگرام")
     sub.add_parser("delete-webhook", help="حذف Webhook تلگرام")
+    ev = sub.add_parser("export-voice-eval", help="خروجی ویس‌ها برای سنجش دقت (JSON)")
+    ev.add_argument("--since", help="فقط ویس‌های از این تاریخ (YYYY-MM-DD)")
     args = parser.parse_args(argv)
+    if args.command == "export-voice-eval":
+        return export_voice_eval(args.since)
     {
         "create-admin": create_admin,
         "reset-password": reset_password,

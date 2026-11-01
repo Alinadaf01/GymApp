@@ -7,6 +7,8 @@ import { writeFileSync } from "node:fs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
+// Self-signed test certificates (e.g. infra/tests/test-compose-stack.sh)
+const IGNORE_TLS = !!process.env.E2E_IGNORE_HTTPS_ERRORS;
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const API = process.env.E2E_API_URL ?? "http://localhost:8000";
@@ -21,7 +23,7 @@ const uniq = Date.now().toString().slice(-5);
 
 const browser = await chromium.launch();
 try {
-  const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 } });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: 1366, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(`${BASE}/login`);
   await page.fill("#username", USER);
@@ -203,7 +205,7 @@ try {
   await ctx.close();
 
   // --- mobile ---
-  const m = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true });
+  const m = await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: 390, height: 844 }, isMobile: true });
   const mp = await m.newPage();
   await mp.goto(`${BASE}/login`);
   await mp.fill("#username", USER);

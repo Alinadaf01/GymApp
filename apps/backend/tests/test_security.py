@@ -88,3 +88,9 @@ def test_errors_do_not_leak_internals(client, admin):
     for url in (f"/api/students/{uuid.uuid4()}", "/api/students/not-a-uuid", f"/api/programs/{uuid.uuid4()}"):
         body = client.get(url).text.lower()
         assert "traceback" not in body and "sqlalchemy" not in body and "psycopg" not in body
+
+
+def test_api_responses_carry_strict_csp(client):
+    r = client.get("/api/health")
+    assert r.headers["content-security-policy"] == "default-src 'none'; frame-ancestors 'none'"
+    assert r.headers["x-content-type-options"] == "nosniff"

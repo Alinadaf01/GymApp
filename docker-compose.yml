@@ -1,5 +1,7 @@
-# Basharnia Coach CRM — VPS stack (backend side). The web panel is hosted on Vercel.
-# Only nginx publishes ports; db and api stay on the internal network.
+# Basharnia Coach CRM — complete stack on one small VPS, one domain:
+#   https://DOMAIN/       -> web (Next.js panel)
+#   https://DOMAIN/api/*  -> api (FastAPI)      Telegram webhook: https://DOMAIN/api/telegram/webhook
+# Only nginx publishes ports; db, api and web stay on the internal network.
 name: basharnia
 
 # Rotate container logs so they cannot fill the disk
@@ -73,11 +75,23 @@ services:
       migrate:
         condition: service_completed_successfully
     networks: [internal]
-    # Whisper "small" int8 needs ~1–2 GB RAM; keep it from starving the API/DB
+    # Whisper "small" int8 peaks around 1.2 GB; keep it from starving the API/DB
     deploy:
       resources:
         limits:
-          memory: 3g
+          memory: 2g
+
+  web:
+    build: ./apps/web
+    restart: unless-stopped
+    logging: *logging
+    expose: ["3000"]
+    depends_on: [api]
+    networks: [internal]
+    deploy:
+      resources:
+        limits:
+          memory: 384m
 
   nginx:
     image: nginx:1.27-alpine
@@ -92,9 +106,9 @@ services:
       # ACME webroot on the host: certbot (installed on the host) renews certificates here
       - /var/www/certbot:/var/www/certbot:ro
     environment:
-      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN is required}
+      DOMAIN: ${DOMAIN:?DOMAIN is required}
       NGINX_MAX_BODY_MB: ${MAX_UPLOAD_MB:-20}
-    depends_on: [api]
+    depends_on: [api, web]
     networks: [internal]
 
 volumes:

@@ -1,8 +1,9 @@
 import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
+// Empty API base = the API is served by the same origin under /api (production on the VPS)
 const API = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
-const apiOrigin = new URL(API).origin;
+const apiOrigin = API ? new URL(API).origin : "";
 
 // Content Security Policy without nonces (nonces would force dynamic rendering).
 // Scripts/styles only from this site; data and private images only from the API.
@@ -10,9 +11,9 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' blob: data: ${apiOrigin}`,
+  `img-src 'self' blob: data:${apiOrigin ? ` ${apiOrigin}` : ""}`,
   "font-src 'self'",
-  `connect-src 'self' ${apiOrigin}`,
+  `connect-src 'self'${apiOrigin ? ` ${apiOrigin}` : ""}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -21,6 +22,8 @@ const csp = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Self-contained server bundle for the Docker image (apps/web/Dockerfile)
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,

@@ -14,6 +14,13 @@ from app.auth.csrf import CSRFMiddleware
 from app.config import get_settings
 
 
+API_SECURITY_HEADERS = {
+    # The API only returns JSON/files: nothing may be executed or framed
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+}
+
+
 def create_app() -> FastAPI:
     settings = get_settings()
     settings.validate_for_production()
@@ -36,6 +43,13 @@ def create_app() -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["Content-Type", "X-Requested-With"],
     )
+
+    @app.middleware("http")
+    async def security_headers(request, call_next):
+        response = await call_next(request)
+        for k, v in API_SECURITY_HEADERS.items():
+            response.headers.setdefault(k, v)
+        return response
 
     app.include_router(health_router, prefix="/api")
     app.include_router(auth_router, prefix="/api")

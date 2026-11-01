@@ -38,3 +38,33 @@ def test_reset_password(monkeypatch, admin):
     cli.main(["reset-password"])
     with SessionLocal() as s:
         assert verify_password(s.scalar(select(User)).password_hash, "recovered-password")
+
+
+def test_export_voice_eval(capsys, admin, client):
+    import json
+
+    from app.models import Program, Student, VoiceRecord
+    from app.models.enums import ProgramType, VoiceStatus
+    from app.models import WorkoutSession, Exercise
+
+    with SessionLocal() as db:
+        s = Student(first_name="علی", last_name="رضایی")
+        db.add(s)
+        db.flush()
+        p = Program(student_id=s.id, title="برنامه", program_type=ProgramType.workout)
+        p.sessions.append(WorkoutSession(title="جلسه اول", sort_order=0,
+                                         exercises=[Exercise(name="اسکوات", sets=4, reps="12", sort_order=0)]))
+        db.add(p)
+        db.flush()
+        db.add(VoiceRecord(student_id=s.id, program_id=p.id, program_type="workout", session_title="جلسه اول",
+                           transcript_raw="اسکوات چار ست", corrected_text="اسکوات چهار ست دوازده تایی",
+                           parsed_payload={"exercises": [{"name": "اسکوات", "sets": 4, "reps": None}]},
+                           processing_status=VoiceStatus.approved))
+        db.commit()
+    cli.main(["export-voice-eval"])
+    data = json.loads(capsys.readouterr().out)
+    (v,) = data["voices"]
+    assert data["count"] == 1 and v["transcript_raw"] == "اسکوات چار ست"
+    assert v["corrected_text"] == "اسکوات چهار ست دوازده تایی"
+    assert v["parsed"]["exercises"][0]["reps"] is None
+    assert v["final_program"]["sessions"][0]["exercises"][0]["reps"] == "12"  # ground truth after review

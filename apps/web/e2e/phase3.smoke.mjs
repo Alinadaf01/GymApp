@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require("playwright");
+// Self-signed test certificates (e.g. infra/tests/test-compose-stack.sh)
+const IGNORE_TLS = !!process.env.E2E_IGNORE_HTTPS_ERRORS;
 
 const BASE = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const USER = process.env.E2E_USERNAME;
@@ -22,7 +24,7 @@ const PHONE_FA = `۰۹۱۲${[...unique].map((d) => "۰۱۲۳۴۵۶۷۸۹"[d]).jo
 
 const browser = await chromium.launch();
 try {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const ctx = await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS, viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
 
   await page.goto(`${BASE}/login`);
@@ -180,7 +182,7 @@ try {
   await ctx.close();
 
   // --- mobile ---
-  const m = await browser.newContext({
+  const m = await browser.newContext({ ignoreHTTPSErrors: IGNORE_TLS,
     viewport: { width: 390, height: 844 },
     isMobile: true,
     storageState: undefined,

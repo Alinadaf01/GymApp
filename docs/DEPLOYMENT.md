@@ -1,218 +1,135 @@
 # راهنمای استقرار — Basharnia Coach CRM
 
-این راهنما سامانه را از صفر روی یک VPS اوبونتو ۲۴.۰۴ (Backend، ربات، Whisper، دیتابیس) و Vercel (پنل) راه‌اندازی می‌کند. همه دستورها روی سرور اجرا می‌شوند، مگر آنکه «روی کامپیوتر خودتان» نوشته شده باشد.
+کل سامانه روی **یک VPS کوچک** و **یک دامنه** اجرا می‌شود؛ Vercel و سرویس دیگری لازم نیست.
 
 ```text
-coach.example.com  ──►  Vercel (پنل Next.js)
-api.example.com    ──►  VPS: nginx (TLS) ─► api (FastAPI) ─► db (PostgreSQL)
-                                  worker (Whisper + Parser)
-                                  /data/basharnia (فایل‌های خصوصی)
-Telegram ──webhook──►  https://api.example.com/api/telegram/webhook
+https://coach.example.com/       ──►  web    (پنل Next.js)
+https://coach.example.com/api/   ──►  api    (FastAPI)  ──►  db (PostgreSQL)
+Telegram ──► https://coach.example.com/api/telegram/webhook
+                                      worker (Whisper + Parser فارسی)
+                                      /data/basharnia (فایل‌های خصوصی)
+همه پشت nginx (TLS)؛ فقط پورت‌های ۸۰ و ۴۴۳ باز هستند
 ```
 
 ## ۰. پیش‌نیازها
 
 | مورد | توضیح |
 |---|---|
-| VPS | Ubuntu 24.04، حداقل ۴ vCPU، ۸ گیگابایت RAM، ۸۰ گیگابایت NVMe |
-| **محل VPS** | سرور باید بدون محدودیت به `api.telegram.org`، Let's Encrypt، Docker Hub، PyPI، `cdn.playwright.dev`، HuggingFace (برای دانلود یک‌باره مدل)، GitHub و مخازن اوبونتو دسترسی داشته باشد. تلگرام در ایران فیلتر است، پس **VPS داخل ایران برای ربات مناسب نیست**؛ VPS خارج از ایران لازم است. |
-| دامنه | دو رکورد DNS: `api.example.com` → IP سرور (رکورد A) و `coach.example.com` → Vercel (رکوردی که Vercel می‌دهد) |
-| ربات تلگرام | Token از [@BotFather](https://t.me/BotFather) و **شناسه عددی** تلگرام مربی (مثلاً با @userinfobot) |
-| کلید بکاپ | یک جفت کلید `age` که **روی کامپیوتر خودتان** ساخته می‌شود (بخش ۸) |
-| فضای بکاپ خارجی | یک حساب ذخیره‌سازی که rclone پشتیبانی کند (بخش ۸ و `BACKUP_RESTORE.md`) |
+| VPS | **Ubuntu 24.04**، **۲ vCPU، ۴ گیگابایت RAM، ۴۰ گیگابایت SSD** کافی است (یک کاربر). بیشترین مصرف مال Whisper است: حدود ۱٫۲ گیگابایت هنگام تبدیل ویس |
+| **محل VPS** | **خارج از ایران**، چون تلگرام در ایران فیلتر است و ربات کار نمی‌کند. سرور باید به `api.telegram.org`، Let's Encrypt، Docker Hub، PyPI، npm، `deb.debian.org`، `cdn.playwright.dev` و HuggingFace دسترسی داشته باشد (VPSهای خارج از ایران معمولاً دارند) |
+| دامنه | یک دامنه یا زیر‌دامنه، مثلاً `coach.example.com`، با رکورد A به IP سرور |
+| ربات تلگرام | Token از [@BotFather](https://t.me/BotFather) و **شناسه عددی** تلگرام مربی (از [@userinfobot](https://t.me/userinfobot)) |
 
-در همه مثال‌ها، `example.com` را با دامنه خودتان جایگزین کنید.
+زمان تبدیل ویس روی ۲ vCPU تقریباً هم‌اندازه طول ویس است (یک دقیقه ویس، حدود یک دقیقه). اگر کند بود، می‌توان VPS را ارتقا داد؛ داده‌ها حفظ می‌شوند.
 
-## ۱. آماده‌سازی و ایمن‌سازی سرور
+## ۱. نصب با یک دستور
 
-با کاربر root و کلید SSH وارد شوید. مخزن خصوصی است، پس برای clone یک Deploy Key فقط‌خواندنی (GitHub → Settings → Deploy keys) یا یک توکن محدود به همین مخزن لازم است.
+با SSH و کاربر root وارد سرور شوید. مخزن خصوصی است، پس برای clone یکی از این دو لازم است:
+- یک **Deploy key** فقط‌خواندنی (GitHub → مخزن → Settings → Deploy keys)
+- یا یک **Fine-grained token** فقط‌خواندنی محدود به همین مخزن
 
 ```bash
 git clone https://github.com/Alinadaf01/GymApp.git /opt/basharnia
 ```
 
 ```bash
-ADMIN_USER=coachadmin bash /opt/basharnia/infra/scripts/setup-vps.sh
+bash /opt/basharnia/infra/scripts/install.sh
 ```
 
-این اسکریپت (قابل اجرای چندباره) این کارها را انجام می‌دهد:
-- نصب Docker، Compose، certbot، age، rclone، UFW و Fail2ban از مخازن رسمی اوبونتو.
-- فعال کردن به‌روزرسانی امنیتی خودکار.
-- ساخت کاربر مدیر با کلید SSH ریشه.
-- غیرفعال کردن ورود root و ورود با رمز عبور در SSH، **فقط اگر** کاربر مدیر کلید SSH داشته باشد؛ در غیر این صورت هشدار می‌دهد و از قفل شدن جلوگیری می‌کند.
-- باز گذاشتن فقط پورت‌های ۲۲، ۸۰ و ۴۴۳ در فایروال، فعال کردن Fail2ban برای SSH، ساخت swap و ساخت پوشه‌ها با مجوز درست.
+اسکریپت این موارد را می‌پرسد: دامنه، Token ربات (هنگام تایپ نمایش داده نمی‌شود)، شناسه عددی مربی، نام کاربر لینوکس برای ورودهای بعدی، و ایمیل برای گواهی SSL. سپس خودش:
 
-برای دیدن کارهایی که انجام می‌شود، بدون اجرای آن‌ها:
+1. سرور را ایمن می‌کند: SSH فقط با کلید، ورود root بسته، فایروال، Fail2ban، به‌روزرسانی امنیتی خودکار و swap.
+2. همه رمزها را تصادفی می‌سازد و در `.env` (با مجوز `600`) ذخیره می‌کند.
+3. بررسی می‌کند که دامنه به همین سرور اشاره کند.
+4. image‌ها را می‌سازد (بار اول چند دقیقه طول می‌کشد) و گواهی SSL می‌گیرد.
+5. سرویس‌ها را اجرا می‌کند و سالم بودن را بررسی می‌کند.
+6. نام کاربری و رمز **حساب مربی** را می‌پرسد (رمز حداقل ۱۰ کاراکتر).
+7. مدل Whisper را دانلود می‌کند و ربات تلگرام را وصل می‌کند.
 
-```bash
-DRY_RUN=1 ADMIN_USER=coachadmin bash /opt/basharnia/infra/scripts/setup-vps.sh
-```
+اجرای دوباره اسکریپت بی‌خطر است و مراحل انجام‌شده را رد می‌کند.
 
-> **هشدار:** پیش از بستن نشست root، در یک ترمینال دیگر با `ssh coachadmin@SERVER` وارد شوید و مطمئن شوید ورود کار می‌کند.
+> **هشدار SSH:** بعد از نصب، ورود root بسته می‌شود. **پیش از بستن نشست فعلی**، در یک ترمینال دیگر با `ssh coachadmin@coach.example.com` (همان کلید قبلی) وارد شوید و مطمئن شوید کار می‌کند. اسکریپت فقط وقتی SSH را می‌بندد که کلید شما برای کاربر جدید کپی شده باشد.
 
-از اینجا به بعد با کاربر مدیر کار کنید (`sudo` برای دستورهای root).
+## ۲. بررسی
 
-## ۲. تنظیم `.env`
+- `https://coach.example.com` را باز کنید و با حساب مربی وارد شوید.
+- در تلگرام به ربات `/start` بفرستید. از هر حساب دیگری باید پیام «این ربات فقط برای مربی است» برگردد.
+- در پنل، بخش **تنظیمات**، لوگو، نام مربی، شماره تماس و رنگ را وارد کنید (روی PDFها چاپ می‌شوند).
 
-```bash
-cd /opt/basharnia && cp .env.example .env && chmod 600 .env
-```
+## ۳. بکاپ (پیش از ورود داده واقعی)
 
-برای ساختن مقدارهای تصادفی:
-
-```bash
-python3 -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-| متغیر | مقدار |
-|---|---|
-| `APP_ENV` | `production` |
-| `APP_SECRET_KEY` | مقدار تصادفی (حداقل ۳۲ کاراکتر) |
-| `POSTGRES_PASSWORD` | مقدار تصادفی |
-| `DATABASE_URL` | `postgresql+psycopg://basharnia:<POSTGRES_PASSWORD>@db:5432/basharnia` |
-| `FRONTEND_URL` | `https://coach.example.com` (باید https باشد) |
-| `API_BASE_URL` و `API_DOMAIN` | `https://api.example.com` و `api.example.com` |
-| `TELEGRAM_BOT_TOKEN`، `TELEGRAM_ALLOWED_USER_ID` | از BotFather و شناسه عددی مربی |
-| `TELEGRAM_WEBHOOK_SECRET` | مقدار تصادفی (حداقل ۲۴ کاراکتر) |
-| `ADMIN_USERNAME`، `INITIAL_ADMIN_PASSWORD` | **خالی بگذارید**؛ رمز در بخش ۵ به‌صورت تعاملی پرسیده می‌شود |
-
-API در حالت production با تنظیمات ناامن **اجرا نمی‌شود**: کلید کوتاه، `DATABASE_URL` توسعه، یا `FRONTEND_URL` غیر https.
-
-## ۳. ساخت image و گواهی SSL
-
-```bash
-cd /opt/basharnia && docker compose build
-```
-
-پیش از اجرای nginx (پورت ۸۰ باید آزاد باشد و DNS دامنه API به همین سرور اشاره کند):
-
-```bash
-sudo API_DOMAIN=api.example.com LE_EMAIL=you@example.com bash infra/scripts/init-ssl.sh
-```
-
-این اسکریپت گواهی اول را می‌گیرد، تمدیدها را روی webroot nginx تنظیم می‌کند (بدون قطعی)، بعد از هر تمدید nginx را reload می‌کند و تایمر تمدید certbot را فعال می‌کند. برای آزمایش تمدید:
-
-```bash
-sudo certbot renew --dry-run
-```
-
-## ۴. اجرای سرویس‌ها
-
-```bash
-cd /opt/basharnia && docker compose up -d
-```
-
-`migrate` پیش از `api` و `worker` اجرا می‌شود و migrationها را اعمال می‌کند. بررسی:
-
-```bash
-curl -s https://api.example.com/api/health/ready
-```
-
-پاسخ باید `{"status":"ok","database":"ok"}` باشد.
-
-## ۵. حساب مربی
-
-```bash
-docker compose run --rm api python -m app.cli create-admin
-```
-
-نام کاربری و رمز (حداقل ۱۰ کاراکتر) پرسیده می‌شود. اگر رمز فراموش شد، با `reset-password` رمز جدید بگذارید؛ این دستور همه نشست‌ها را باطل می‌کند.
-
-## ۶. مدل Whisper و ربات تلگرام
-
-مدل یک‌بار در Volume دائمی دانلود می‌شود (حدود ۴۶۰ مگابایت برای `small`). بعد از آن، worker بدون اینترنت بارگذاری‌اش می‌کند.
-
-```bash
-docker compose run --rm worker python -m app.cli download-whisper-model
-```
-
-```bash
-docker compose restart worker
-```
-
-```bash
-docker compose run --rm api python -m app.cli set-webhook
-```
-
-```bash
-docker compose run --rm api python -m app.cli webhook-info
-```
-
-در تلگرام به ربات `/start` بفرستید. از هر حساب دیگری باید پیام «این ربات فقط برای مربی است» برگردد.
-
-## ۷. پنل روی Vercel
-
-1. در Vercel، مخزن GitHub را Import کنید.
-2. **Root Directory** را `apps/web` بگذارید. Framework به‌صورت خودکار Next.js تشخیص داده می‌شود و Node باید ۲۲ باشد.
-3. Environment Variable را تنظیم کنید: `NEXT_PUBLIC_API_BASE_URL=https://api.example.com`. هیچ Secretی در Vercel لازم نیست.
-4. Deploy کنید و در Settings → Domains دامنه `coach.example.com` را اضافه کنید.
-
-پنل و API باید **زیر یک دامنه اصلی** باشند (`coach.` و `api.` در `example.com`)، چون Cookie ورود `SameSite=Lax` است.
-
-> **شرایط Vercel Hobby:** پلن رایگان Hobby طبق شرایط Vercel برای استفاده **شخصی و غیرتجاری** است. استفاده یک مجموعه ورزشی ممکن است تجاری حساب شود. پیش از استقرار شرایط فعلی را بررسی کنید. جایگزین‌ها: پلن Pro در Vercel، یا اجرای پنل روی همان VPS (درخواست جداگانه).
-
-## ۸. بکاپ خودکار
-
-۱. **روی کامپیوتر خودتان** (نه روی سرور) کلید بسازید و فایل کلید خصوصی را در جای امن (مثلاً مدیر رمز عبور یا USB) نگه دارید:
+۱. **روی کامپیوتر خودتان** (نه روی سرور) کلید بکاپ بسازید. ابزار `age` را از [github.com/FiloSottile/age](https://github.com/FiloSottile/age/releases) بگیرید (ویندوز، مک و لینوکس):
 
 ```bash
 age-keygen -o basharnia-backup.key
 ```
 
-۲. روی سرور، پیکربندی بکاپ را بسازید:
+فایل `basharnia-backup.key` را در دو جای امن نگه دارید (مثلاً مدیر رمز عبور و یک USB). **بدون این فایل هیچ بکاپی باز نمی‌شود.** خط `public key: age1...` همان کلید عمومی است که روی سرور می‌گذارید.
+
+۲. روی سرور:
 
 ```bash
-sudo install -m 600 /opt/basharnia/infra/backup/backup.env.example /etc/basharnia/backup.env
+sudo install -m 600 /opt/basharnia/infra/backup/backup.env.example /etc/basharnia/backup.env && sudo nano /etc/basharnia/backup.env
 ```
 
-در این فایل، `AGE_RECIPIENT` را برابر کلید عمومی (خط `public key: age1...`) و `RCLONE_REMOTE` را برابر مقصد خارجی بگذارید. مقصد را با این دستور تعریف کنید:
+در این فایل، `AGE_RECIPIENT=age1...` (کلید عمومی) و `RCLONE_REMOTE` را بگذارید. مقصد خارجی را با `sudo rclone config` تعریف کنید؛ گزینه‌ها در `BACKUP_RESTORE.md` آمده است.
+
+۳. فعال‌سازی، اجرای اول و بررسی:
 
 ```bash
-sudo rclone config
-```
-
-۳. تایمر روزانه را فعال کنید و یک بار دستی اجرا کنید:
-
-```bash
-sudo cp /opt/basharnia/infra/systemd/basharnia-backup.* /etc/systemd/system/ && sudo systemctl daemon-reload
-```
-
-```bash
-sudo systemctl enable --now basharnia-backup.timer && sudo systemctl start basharnia-backup.service
+sudo cp /opt/basharnia/infra/systemd/basharnia-backup.* /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now basharnia-backup.timer
 ```
 
 ```bash
-journalctl -u basharnia-backup -n 30
+sudo systemctl start basharnia-backup.service && journalctl -u basharnia-backup -n 30
 ```
 
-۴. **تمرین بازیابی** (پیش از تحویل، و بعد از آن هر ماه): مراحل در `BACKUP_RESTORE.md`.
+۴. تمرین بازیابی را یک بار انجام دهید (`BACKUP_RESTORE.md`).
 
-## ۹. به‌روزرسانی نسخه
+## ۴. دوره تست ویس
+
+نصب‌کننده `AUDIO_RETAIN_HOURS=720` تنظیم می‌کند: ویس‌های خام ۳۰ روز نگه داشته می‌شوند تا بشود دقت را روی همان ویس‌ها دوباره سنجید. روند تست در [`VOICE_TEST.md`](VOICE_TEST.md) آمده است. پس از پایان دوره تست، برای حذف فوری ویس‌ها مقدار را صفر کنید:
 
 ```bash
-cd /opt/basharnia && git pull && docker compose build && docker compose up -d
+cd /opt/basharnia && sudo sed -i 's/^AUDIO_RETAIN_HOURS=.*/AUDIO_RETAIN_HOURS=0/' .env && docker compose up -d worker
 ```
 
-migrationهای جدید خودکار اجرا می‌شوند. پیش از هر به‌روزرسانی مهم یک بکاپ دستی بگیرید (`sudo systemctl start basharnia-backup.service`). Vercel با هر push به شاخه اصلی دوباره deploy می‌کند.
+## ۵. به‌روزرسانی نسخه
 
-## ۱۰. بررسی نهایی پس از استقرار
+```bash
+cd /opt/basharnia && sudo systemctl start basharnia-backup.service && git pull && docker compose build && docker compose up -d
+```
 
-- [ ] `https://api.example.com/api/health/ready` وضعیت ok را نشان می‌دهد و `http://` به `https://` هدایت می‌شود.
-- [ ] ورود به `https://coach.example.com`، ساخت شاگرد و آپلود عکس پروفایل.
-- [ ] ثبت برنامه، تأیید، دانلود و چاپ PDF.
-- [ ] ربات: `/start`، ارسال یک ویس واقعی، بازبینی، تأیید و دریافت PDF در تلگرام.
+migrationهای جدید خودکار اجرا می‌شوند.
+
+## ۶. چک‌لیست نهایی
+
+- [ ] پنل روی `https://` باز می‌شود و `http://` به `https://` هدایت می‌شود.
+- [ ] ورود، ساخت شاگرد و آپلود عکس.
+- [ ] ثبت برنامه، تأیید، دانلود و **چاپ PDF**.
+- [ ] ربات: `/start`، یک **ویس واقعی**، بازبینی، تأیید و دریافت PDF در تلگرام.
 - [ ] پیام به ربات از یک حساب دیگر رد می‌شود.
-- [ ] `sudo ufw status` فقط پورت‌های ۲۲، ۸۰ و ۴۴۳ را نشان می‌دهد و `sudo fail2ban-client status sshd` فعال است.
+- [ ] `sudo ufw status` فقط پورت‌های ۲۲، ۸۰ و ۴۴۳ را نشان می‌دهد.
 - [ ] `docker compose ps` همه سرویس‌ها را healthy یا running نشان می‌دهد.
-- [ ] بکاپ اول ساخته شده، در مقصد خارجی موجود است و **تمرین بازیابی** پاس شده است.
+- [ ] بکاپ اول ساخته شده، در مقصد خارجی هست و **تمرین بازیابی** پاس شده است.
 - [ ] `sudo certbot renew --dry-run` موفق است.
 
 ## عیب‌یابی
 
 | مشکل | بررسی |
 |---|---|
-| ربات جواب نمی‌دهد | `webhook-info` (`last_error_message`)، `docker compose logs api`، درست بودن `TELEGRAM_ALLOWED_USER_ID` (شناسه عددی) |
-| ویس پردازش نمی‌شود | `docker compose logs worker`؛ اگر مدل در Volume نباشد، دستور دانلود بخش ۶ را اجرا کنید |
-| خطای ورود یا Cookie در پنل | `FRONTEND_URL` دقیقاً برابر آدرس پنل باشد؛ پنل و API زیر یک دامنه اصلی و هر دو روی https باشند |
-| PDF ساخته نمی‌شود | `docker compose logs api`؛ حافظه سرور (Chromium) را بررسی کنید |
-| دیسک پر شده | `docker system df`؛ لاگ کانتینرها محدود است (۵ فایل ۱۰ مگابایتی)؛ بکاپ‌های محلی بیش از ۷+۴ نسخه نگه داشته نمی‌شوند |
+| خطای DNS در نصب | رکورد A دامنه باید IP همین سرور باشد؛ چند دقیقه صبر کنید و دوباره اجرا کنید |
+| ربات جواب نمی‌دهد | `docker compose run --rm api python -m app.cli webhook-info` (`last_error_message`) و `docker compose logs api` |
+| ویس پردازش نمی‌شود | `docker compose logs worker` |
+| خطای ورود در پنل | `FRONTEND_URL` و `API_BASE_URL` در `.env` باید دقیقاً `https://<دامنه>` باشند |
+| PDF ساخته نمی‌شود | `docker compose logs api` و حافظه آزاد (`free -h`) |
+| رمز مربی فراموش شده | `docker compose run --rm api python -m app.cli reset-password` |
+
+## نصب دستی (اختیاری)
+
+اسکریپت‌ها جدا هم قابل اجرا هستند:
+- `infra/scripts/setup-vps.sh`: ایمن‌سازی سرور (با `DRY_RUN=1` فقط کارهایی را که انجام می‌دهد نشان می‌دهد).
+- `infra/scripts/init-ssl.sh`: گواهی SSL.
+- سپس با `docker compose up -d` اجرا کنید.
+
+متغیرهای `.env` در `.env.example` توضیح داده شده‌اند.

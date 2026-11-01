@@ -5,7 +5,8 @@ CRM سبک تک‌مربی برای مجموعه ورزشی Basharnia: پرون�
 
 - سند مرجع نیازمندی‌ها: [`PROJECT_SPEC.md`](PROJECT_SPEC.md)
 - وضعیت پیاده‌سازی و نتایج تست: [`IMPLEMENTATION_STATUS.md`](IMPLEMENTATION_STATUS.md)
-- **استقرار روی VPS و Vercel:** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- **استقرار (یک VPS، نصب با یک دستور):** [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)
+- **دوره تست ویس:** [`docs/VOICE_TEST.md`](docs/VOICE_TEST.md)
 - **بکاپ و بازیابی:** [`docs/BACKUP_RESTORE.md`](docs/BACKUP_RESTORE.md)
 - **امنیت:** [`docs/SECURITY.md`](docs/SECURITY.md)
 - **گزارش تست‌های پذیرش:** [`docs/ACCEPTANCE.md`](docs/ACCEPTANCE.md)
@@ -13,7 +14,7 @@ CRM سبک تک‌مربی برای مجموعه ورزشی Basharnia: پرون�
 ## ساختار
 
 ```text
-apps/web/       پنل Next.js (TypeScript, Tailwind) — میزبانی روی Vercel
+apps/web/       پنل Next.js (TypeScript, Tailwind) — کانتینر standalone روی همان VPS
 apps/backend/   FastAPI + SQLAlchemy 2 + Alembic — اجرا روی VPS
 infra/nginx/    قالب Nginx (TLS، reverse proxy، هدرهای امنیتی، rate limit)
 infra/scripts/  آماده‌سازی و ایمن‌سازی VPS، گواهی SSL
@@ -111,7 +112,7 @@ docker compose run --rm api python -m app.cli webhook-info
 - رمزها با Argon2id هش می‌شوند.
 - محدودیت ورود: ۵ تلاش ناموفق برای هر نام کاربری و ۲۰ تلاش برای هر IP در ۱۵ دقیقه (ذخیره در دیتابیس) و یک limit دیگر در Nginx.
 - CSRF: درخواست‌های تغییر‌دهنده باید هدر `X-Requested-With: fetch` داشته باشند و Origin، اگر فرستاده شود، باید دامنه پنل باشد.
-- پنل و API باید زیر یک دامنه اصلی باشند (مثلاً `coach.example.com` و `api.example.com`) تا Cookie با `SameSite=Lax` کار کند.
+- در production، پنل و API روی **یک دامنه** هستند (پنل در `/` و API در `/api`). در توسعه محلی، پنل روی پورت ۳۰۰۰ و API روی ۸۰۰۰ اجرا می‌شود.
 
 ## Health check
 
@@ -122,12 +123,16 @@ docker compose run --rm api python -m app.cli webhook-info
 
 ## استقرار
 
-راهنمای کامل گام‌به‌گام: **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)** (آماده‌سازی و ایمن‌سازی VPS، `.env`، SSL، اجرای سرویس‌ها، حساب مربی، مدل Whisper و ربات، Vercel، بکاپ و چک‌لیست نهایی).
+راهنمای کامل گام‌به‌گام: **[`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md)** (نصب با یک دستور روی یک VPS، بکاپ، به‌روزرسانی، چک‌لیست نهایی و عیب‌یابی).
 
-خلاصه روی VPS (پس از `infra/scripts/setup-vps.sh` و پر کردن `.env`):
+خلاصه: روی یک Ubuntu 24.04 تازه، با کاربر root:
 
 ```bash
-docker compose build && docker compose up -d
+git clone https://github.com/Alinadaf01/GymApp.git /opt/basharnia
+```
+
+```bash
+bash /opt/basharnia/infra/scripts/install.sh
 ```
 
 فایل‌های خصوصی در `STORAGE_HOST_PATH` (پیش‌فرض `/data/basharnia`) ذخیره می‌شوند و کانتینرها با کاربر غیر root (UID `10001`) اجرا می‌شوند؛ اسکریپت آماده‌سازی مجوزها را تنظیم می‌کند.

@@ -1,5 +1,5 @@
-# Rendered by the nginx image's envsubst at startup (${API_DOMAIN}, ${NGINX_MAX_BODY_MB}).
-# Only the API runs behind this nginx; the panel is served by Vercel.
+# Rendered by the nginx image's envsubst at startup (${DOMAIN}, ${NGINX_MAX_BODY_MB}).
+# One domain serves everything:  /api/*  -> api (FastAPI)   ·   everything else -> web (Next.js panel)
 
 # Edge rate limit for login (the API also enforces a persistent per-user/IP limit)
 limit_req_zone $binary_remote_addr zone=login:10m rate=10r/m;
@@ -16,7 +16,7 @@ geo $telegram_source {
 
 server {
     listen 80;
-    server_name ${API_DOMAIN};
+    server_name ${DOMAIN};
     server_tokens off;
 
     location /.well-known/acme-challenge/ {
@@ -31,10 +31,10 @@ server {
 server {
     listen 443 ssl;
     http2 on;
-    server_name ${API_DOMAIN};
+    server_name ${DOMAIN};
 
-    ssl_certificate     /etc/letsencrypt/live/${API_DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${API_DOMAIN}/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
@@ -42,11 +42,21 @@ server {
     ssl_session_tickets off;
 
     server_tokens off;
+
+    # Resolve api/web through Docker's DNS at request time. With a fixed name in
+    # proxy_pass nginx resolves it ONCE at startup; after an api/web container is
+    # restarted or re-created (updates, restores) it gets a new IP and nginx would
+    # keep answering 502 until reloaded.
+    resolver 127.0.0.11 valid=10s ipv6=off;
+    set $api_upstream http://api:8000;
+    set $web_upstream http://web:3000;
+
+    # Common headers for panel and API. Content-Security-Policy is set by each app:
+    # the panel (Next.js) allows its own scripts; the API sends "default-src 'none'".
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-Frame-Options "DENY" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'none'; frame-ancestors 'none'" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
 
     client_max_body_size ${NGINX_MAX_BODY_MB}m;
@@ -61,27 +71,33 @@ server {
     proxy_connect_timeout 10s;
     proxy_read_timeout 120s;   # PDF generation; voice jobs run in the worker, not in-request
     proxy_send_timeout 120s;
+    # These are already added above; drop the apps' copies to avoid duplicate headers
+    proxy_hide_header X-Content-Type-Options;
+    proxy_hide_header X-Frame-Options;
+    proxy_hide_header Referrer-Policy;
+    proxy_hide_header Permissions-Policy;
 
     location = /api/auth/login {
         limit_req zone=login burst=5 nodelay;
         limit_req_status 429;
-        proxy_pass http://api:8000;
+        proxy_pass $api_upstream;
     }
 
     location = /api/telegram/webhook {
         if ($telegram_source = 0) {
             return 403;
         }
-        proxy_pass http://api:8000;
+        proxy_pass $api_upstream;
     }
 
     location /api/ {
         limit_req zone=api burst=60 nodelay;
         limit_req_status 429;
-        proxy_pass http://api:8000;
+        proxy_pass $api_upstream;
     }
 
+    # Panel (Next.js standalone server)
     location / {
-        return 404;
+        proxy_pass $web_upstream;
     }
 }

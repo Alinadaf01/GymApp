@@ -12,4 +12,4 @@ npm run build
 
 - RTL و فارسی؛ فونت Vazirmatn به‌صورت محلی در `app/fonts` (مجوز OFL).
 - هیچ Secretی در Frontend قرار نمی‌گیرد؛ فقط متغیرهای `NEXT_PUBLIC_*` غیرمحرمانه.
-- میزبانی روی Vercel (Root Directory: `apps/web`).
+- در production با `Dockerfile` همین پوشه به‌صورت standalone و پشت nginx روی همان دامنه API اجرا می‌شود (`NEXT_PUBLIC_API_BASE_URL` خالی یعنی `/api` روی همان دامنه).
