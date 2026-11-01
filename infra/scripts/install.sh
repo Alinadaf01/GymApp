@@ -83,6 +83,22 @@ if [[ ${INSTALL_ENV_ONLY:-0} == 1 ]]; then write_env; exit 0; fi
 [[ $EUID -eq 0 ]] || die "run as root (sudo bash $0)"
 grep -q 'VERSION_ID="24.04"' /etc/os-release || warn "tested on Ubuntu 24.04 only"
 
+say "0/8 Network check (everything the install and the bot need)"
+blocked=()
+for url in https://api.telegram.org https://registry-1.docker.io/v2/ https://pypi.org/simple/ \
+           https://registry.npmjs.org https://deb.debian.org/debian/ https://cdn.playwright.dev \
+           https://huggingface.co https://acme-v02.api.letsencrypt.org/directory https://github.com; do
+  code=$(curl -sS -m 15 -o /dev/null -w '%{http_code}' "$url" 2>/dev/null || true)
+  if [[ -z $code || $code == 000 ]]; then blocked+=("$url"); else ok "reachable: $url"; fi
+done
+if [[ ${#blocked[@]} -gt 0 ]]; then
+  printf '✗ not reachable from this server: %s\n' "${blocked[@]}" >&2
+  if [[ " ${blocked[*]} " == *api.telegram.org* ]]; then
+    die "Telegram is not reachable. The bot cannot work on this server (servers inside Iran cannot reach Telegram). Use a VPS outside Iran."
+  fi
+  die "Some required sites are blocked from this server; installation cannot continue."
+fi
+
 say "1/8 Questions"
 ask ADMIN_USER "Linux user for logging in from now on (created if missing)" "coachadmin"
 ask LE_EMAIL "Email for SSL certificate notices"
@@ -102,6 +118,9 @@ dns_ip=$(getent ahostsv4 "$DOMAIN" | awk 'NR==1{print $1}' || true)
 if [[ -z $dns_ip ]]; then
   die "$DOMAIN does not resolve yet. Create an A record $DOMAIN -> ${public_ip:-<server IP>}, wait a few minutes, run again."
 elif [[ -n $public_ip && $dns_ip != "$public_ip" ]]; then
+  if curl -fsS -m 10 "http://$DOMAIN/cdn-cgi/trace" 2>/dev/null | grep -q "^fl="; then
+    die "$DOMAIN goes through the Cloudflare proxy (orange cloud). In Cloudflare DNS set this record to 'DNS only' (grey cloud), wait a minute, run again. (The proxy hides real client IPs from the login rate limit and breaks the Telegram webhook filter.)"
+  fi
   die "$DOMAIN points to $dns_ip but this server is $public_ip. Fix the A record and run again."
 fi
 ok "DNS OK ($DOMAIN -> $dns_ip)"
