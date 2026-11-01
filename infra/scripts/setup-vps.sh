@@ -56,7 +56,13 @@ if [[ ! -s $ADMIN_KEYS && -s /root/.ssh/authorized_keys ]]; then
 fi
 
 log "SSH hardening"
-if [[ -s $ADMIN_KEYS ]]; then
+# Root SSH login gets closed, so the admin user must be able to sudo: it needs a password.
+admin_has_password=0
+[[ $(passwd -S "$ADMIN_USER" 2>/dev/null | awk '{print $2}') == P ]] && admin_has_password=1
+if [[ -s $ADMIN_KEYS && $admin_has_password == 0 ]]; then
+  echo "!! $ADMIN_USER has no password, so it could not use sudo once root login is closed."
+  echo "!! SSH hardening SKIPPED. Set one (passwd $ADMIN_USER), test 'sudo whoami' as $ADMIN_USER, then run this script again."
+elif [[ -s $ADMIN_KEYS ]]; then
   write /etc/ssh/sshd_config.d/99-basharnia.conf 0644 <<CONF
 Port $SSH_PORT
 PermitRootLogin no

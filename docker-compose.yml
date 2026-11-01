@@ -66,6 +66,12 @@ services:
     environment:
       WHISPER_MODEL_DIR: /models
     command: ["python", "-m", "app.worker"]
+    # The image's check calls the API port, which the worker does not serve
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q app.worker /proc/1/cmdline"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     volumes:
       - ${STORAGE_HOST_PATH:-/data/basharnia}:/data/basharnia
       - whisper-models:/models

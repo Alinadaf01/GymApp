@@ -27,8 +27,13 @@ if [[ ! -s /etc/letsencrypt/live/$DOMAIN/fullchain.pem ]]; then
 fi
 
 install -d -m 755 "$WEBROOT"
-# Renew through nginx's webroot from now on (no downtime)
-certbot reconfigure --cert-name "$DOMAIN" --webroot -w "$WEBROOT" --non-interactive
+# Renew through nginx's webroot from now on (no downtime). certbot tests the
+# webroot right away, so this needs nginx running; run this script again then.
+if ss -ltn 'sport = :80' | grep -q LISTEN; then
+  certbot reconfigure --cert-name "$DOMAIN" --webroot -w "$WEBROOT" --non-interactive
+else
+  echo "nginx is not running yet: renewal stays 'standalone' until this script runs again with nginx up."
+fi
 
 install -d /etc/letsencrypt/renewal-hooks/deploy
 cat > /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh <<HOOK

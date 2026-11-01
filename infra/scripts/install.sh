@@ -142,6 +142,8 @@ say "6/8 Starting services"
 docker compose up -d --wait db migrate api web nginx
 code=$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN/api/health/ready" || true)
 [[ $code == 200 ]] && ok "https://$DOMAIN is up" || die "health check failed ($code): docker compose logs api nginx"
+# nginx now serves the ACME webroot: switch certificate renewal to it (idempotent)
+DOMAIN=$DOMAIN LE_EMAIL=$LE_EMAIL APP_DIR=$APP_DIR bash infra/scripts/init-ssl.sh
 
 say "7/8 Coach account"
 if docker compose exec -T db psql -U basharnia -d basharnia -Atc "SELECT count(*) FROM users" | grep -qx 0; then
@@ -173,6 +175,8 @@ cat <<DONE
  - Log in with the account you just created.
  - In Telegram, send /start to the bot.
  - Next: set up backups (docs/DEPLOYMENT.md, section 8).
- - Log in from now on as: ssh $ADMIN_USER@$DOMAIN
+ - Before closing root login: give $ADMIN_USER a password (passwd $ADMIN_USER) and
+   your SSH key (~$ADMIN_USER/.ssh/authorized_keys), test "ssh $ADMIN_USER@$DOMAIN"
+   and "sudo whoami", then run: ADMIN_USER=$ADMIN_USER bash infra/scripts/setup-vps.sh
 ==========================================================
 DONE
